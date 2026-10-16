@@ -34,12 +34,12 @@ watch(visible, (v) => v === 'visible' && refresh())
 
 <template>
   <!-- Phones: profile (opens the drawer) at the start, the wordmark centred, who is online at the end. -->
-  <div class="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 pb-1 lg:hidden" :class="safe ? 'pt-[calc(var(--safe-top)+0.5rem)]' : 'pt-2'">
+  <div class="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 pb-3 lg:hidden" :class="safe ? 'pt-[calc(var(--safe-top)+0.5rem)]' : 'pt-2'">
     <button class="liquid justify-self-start rounded-full p-0.5 transition active:scale-90" :aria-label="t('nav.profile')" @click="ui.drawerOpen = true">
       <Avatar :name="auth.user?.name" :src="auth.user?.avatar_url" size="size-9 text-sm" />
     </button>
 
-    <RouterLink to="/" class="font-brand text-[1.7rem] leading-none text-fg">{{ t('app.name') }}</RouterLink>
+    <RouterLink to="/" class="font-brand pb-1 text-[1.7rem] leading-tight text-fg">{{ t('app.name') }}</RouterLink>
 
     <button
       v-if="online.length"

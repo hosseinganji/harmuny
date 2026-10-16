@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ArrowDownCircle, CheckCircle2, Heart, MoreHorizontal, Pause, Play } from 'lucide-vue-next'
-import { computed } from 'vue'
+import { ArrowDownCircle, CheckCircle2, Heart, ListEnd, ListStart, MoreHorizontal, Pause, Play } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 import { duration, num } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { Track } from '@/lib/types'
@@ -23,29 +23,87 @@ const shown = computed(() => (props.track.kind === 'remote' ? library.get(props.
 const progress = computed(() => (props.track.kind === 'remote' ? downloads.progress.get(props.track.id) : undefined))
 
 function onClick() {
+  if (swiped) return
   if (isCurrent.value) player.toggle()
   else emit('play')
 }
 
+// Swipe: left-to-right adds the song to the queue, right-to-left plays it next. Long-press opens the menu.
+const SWIPE_TRIGGER = 80
+const SWIPE_MAX = 130
+const dx = ref(0)
+const settling = ref(false)
+let startX = 0
+let startY = 0
+let axis: 'x' | 'y' | null = null
+let swiped = false
 let pressTimer: ReturnType<typeof setTimeout> | undefined
+
 function onTouchStart(e: TouchEvent) {
   const touch = e.touches[0]
+  startX = touch.clientX
+  startY = touch.clientY
+  axis = null
+  swiped = false
+  settling.value = false
   pressTimer = setTimeout(() => emit('menu', { clientX: touch.clientX, clientY: touch.clientY } as MouseEvent), 500)
 }
-function cancelPress() {
-  clearTimeout(pressTimer)
+
+function onTouchMove(e: TouchEvent) {
+  const touch = e.touches[0]
+  const x = touch.clientX - startX
+  const y = touch.clientY - startY
+  if (Math.abs(x) > 8 || Math.abs(y) > 8) clearTimeout(pressTimer)
+  // Decide once per gesture, so vertical scrolling never turns into a swipe.
+  if (!axis && (Math.abs(x) > 10 || Math.abs(y) > 10)) axis = Math.abs(x) > Math.abs(y) * 1.3 ? 'x' : 'y'
+  if (axis !== 'x') return
+  // Past the trigger point the row resists, like iOS.
+  const past = Math.max(0, Math.abs(x) - SWIPE_TRIGGER)
+  dx.value = Math.sign(x) * Math.min(SWIPE_MAX, Math.min(Math.abs(x), SWIPE_TRIGGER) + past * 0.35)
 }
+
+function onTouchEnd() {
+  clearTimeout(pressTimer)
+  if (axis === 'x') {
+    swiped = true
+    if (dx.value >= SWIPE_TRIGGER) player.addToQueue(props.track)
+    else if (dx.value <= -SWIPE_TRIGGER) player.playNext(props.track)
+    if (Math.abs(dx.value) >= SWIPE_TRIGGER) navigator.vibrate?.(12)
+    // The click that follows a swipe must not start playback.
+    setTimeout(() => (swiped = false), 350)
+  }
+  settling.value = true
+  dx.value = 0
+  axis = null
+}
+
+const armed = computed(() => Math.abs(dx.value) >= SWIPE_TRIGGER)
 </script>
 
 <template>
+  <div class="relative overflow-hidden rounded-xl [touch-action:pan-y]">
+    <!-- Revealed behind the row while it is swiped -->
+    <div
+      v-if="dx"
+      class="absolute inset-0 flex items-center px-5 text-sm font-semibold text-white transition-colors"
+      :class="[dx > 0 ? 'justify-start' : 'justify-end', armed ? (dx > 0 ? 'bg-accent' : 'bg-emerald-600') : 'bg-fg/15']"
+      dir="ltr"
+    >
+      <span class="flex items-center gap-2 transition-transform duration-200" :class="{ 'scale-110': armed }">
+        <template v-if="dx > 0"><ListEnd class="size-5" />{{ t('menu.addToQueue') }}</template>
+        <template v-else>{{ t('menu.playNext') }}<ListStart class="size-5" /></template>
+      </span>
+    </div>
   <div
     class="group relative flex h-15 cursor-pointer select-none items-center gap-3 rounded-xl px-2 transition-colors hover:bg-fg/5 sm:px-3"
-    :class="{ 'bg-fg/[0.04]': isCurrent }"
+    :class="[{ 'bg-fg/[0.04]': isCurrent && !dx, '!bg-bg': dx }, settling ? 'transition-transform duration-300 ease-[var(--ease-sheet)]' : '']"
+    :style="dx ? { transform: `translateX(${dx}px)` } : undefined"
     @click="onClick"
     @contextmenu.prevent="emit('menu', $event)"
     @touchstart.passive="onTouchStart"
-    @touchend="cancelPress"
-    @touchmove="cancelPress"
+    @touchmove.passive="onTouchMove"
+    @touchend="onTouchEnd"
+    @touchcancel="onTouchEnd"
   >
     <div v-if="numbered" class="hidden w-6 shrink-0 text-center text-sm text-subtle tabular sm:block">
       <PlayingBars v-if="isCurrent" :paused="!player.playing" />
@@ -96,4 +154,5 @@ function cancelPress() {
       <MoreHorizontal class="size-5" />
     </button>
   </div>
+</div>
 </template>

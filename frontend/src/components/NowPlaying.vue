@@ -38,15 +38,20 @@ function touchStart(e: TouchEvent) {
 }
 function touchMove(e: TouchEvent) {
   if (!dragging) return
+  isDragging.value = true
   dragY.value = Math.max(0, e.touches[0].clientY - startY)
 }
+const isDragging = ref(false)
 function touchEnd() {
   dragging = false
+  isDragging.value = false
+  // Closing keeps the dragged offset so the sheet carries on down from where it was let go.
   if (dragY.value > 120) ui.nowPlayingOpen = false
-  dragY.value = 0
+  else dragY.value = 0
 }
+watch(() => ui.nowPlayingOpen, (open) => open && (dragY.value = 0))
 
-const sheetStyle = computed(() => (dragY.value ? { transform: `translateY(${dragY.value}px)`, transition: 'none' } : {}))
+const sheetStyle = computed(() => ({ '--drag': `${dragY.value}px`, ...(isDragging.value ? { transition: 'none' } : {}) }))
 const downloadState = computed(() => {
   const tr = player.track
   if (!tr || tr.kind !== 'remote') return null
@@ -66,7 +71,7 @@ function more(e: MouseEvent) {
   <Transition name="sheet">
     <div
       v-if="ui.nowPlayingOpen && player.track"
-      class="fixed inset-x-0 bottom-0 top-[10dvh] z-50 flex flex-col overflow-hidden rounded-t-[2rem] bg-bg text-fg shadow-[0_-20px_60px_rgba(0,0,0,0.5)] lg:top-0 lg:rounded-none"
+      class="np-sheet fixed inset-x-0 bottom-0 top-[10dvh] z-50 flex flex-col overflow-hidden rounded-t-[2rem] bg-bg text-fg shadow-[0_-20px_60px_rgba(0,0,0,0.5)] lg:top-0 lg:rounded-none"
       :style="sheetStyle"
       role="dialog"
       :aria-label="t('player.nowPlaying')"

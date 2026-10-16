@@ -1,22 +1,17 @@
 <script setup lang="ts">
-import { onKeyStroke, useOnline } from '@vueuse/core'
+import { onKeyStroke } from '@vueuse/core'
 import { ChevronRight, Download, HardDrive, Heart, History, LogOut, Settings, Shield } from 'lucide-vue-next'
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Avatar from '@/components/Avatar.vue'
-import { apiBase } from '@/lib/config'
-import { count } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { useAuth } from '@/stores/auth'
-import { useLibrary } from '@/stores/library'
 import { useUi } from '@/stores/ui'
 
 const ui = useUi()
 const auth = useAuth()
-const library = useLibrary()
 const route = useRoute()
 const router = useRouter()
-const online = useOnline()
 const version = __APP_VERSION__
 const buildDate = __BUILD_DATE__
 
@@ -28,14 +23,6 @@ const items = computed(() => [
   { to: '/settings', icon: Settings, label: t('settings.title') },
   ...(auth.isAdmin ? [{ to: '/admin', icon: Shield, label: t('nav.admin') }] : []),
 ])
-
-const server = computed(() => {
-  try {
-    return new URL(apiBase(), location.origin).host
-  } catch {
-    return location.host
-  }
-})
 
 const close = () => (ui.drawerOpen = false)
 watch(() => route.fullPath, close)
@@ -94,14 +81,6 @@ async function logout() {
             <div class="min-w-0">
               <div class="font-bold text-fg">{{ t('app.name') }}</div>
               <div dir="ltr" class="text-start">{{ t('drawer.version', { v: version }) }} · {{ buildDate }}</div>
-            </div>
-          </div>
-          <div class="space-y-0.5">
-            <div>{{ t('drawer.songs', { n: count(library.tracks.size) }) }}</div>
-            <div class="flex items-center gap-1.5">
-              <span class="size-1.5 rounded-full" :class="online ? 'bg-success' : 'bg-amber-400'" />
-              <span v-if="online" dir="ltr">{{ t('drawer.server') }}: {{ server }}</span>
-              <span v-else>{{ t('drawer.offline') }}</span>
             </div>
           </div>
         </footer>

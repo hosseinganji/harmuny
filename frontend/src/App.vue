@@ -106,10 +106,11 @@ onKeyStroke('/', (e) => { if (!typing(e)) { e.preventDefault(); router.push('/se
       <div v-if="!online" class="flex items-center justify-center gap-2 bg-amber-500/15 py-1.5 text-xs font-semibold text-amber-400 pt-safe">
         <WifiOff class="size-3.5" />{{ t('app.offline') }}
       </div>
-      <MobileTopBar :safe="online" />
+      <!-- The header belongs to Home only; other pages start right under the status bar. -->
+      <MobileTopBar v-if="route.name === 'home'" :safe="online" />
       <div class="flex min-h-0 flex-1">
         <AppSidebar @new-playlist="newPlaylist = true" />
-        <main data-scroll class="relative min-w-0 flex-1 overflow-y-auto overflow-x-hidden lg:card lg:my-2" :class="{ 'lg:pt-safe': online }">
+        <main data-scroll class="relative min-w-0 flex-1 overflow-y-auto overflow-x-hidden lg:card lg:my-2" :class="online ? (route.name === 'home' ? 'lg:pt-safe' : 'pt-safe') : ''">
           <RouterView v-slot="{ Component, route: r }">
             <Transition name="page" mode="out-in">
               <!-- Views have several root nodes; a single wrapper keeps the transition reliable. -->
