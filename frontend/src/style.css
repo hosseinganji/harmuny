@@ -1,0 +1,328 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/vazirmatn';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@font-face {
+  font-family: 'Pacifico';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/pacifico-latin-400.woff2') format('woff2');
+}
+
+@theme {
+  /* System UI font for English; Vazirmatn covers Persian song titles and artists. */
+  /* The wordmark. */
+  --font-brand: 'Pacifico', cursive;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Vazirmatn Variable', sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-elevated: var(--elevated);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: #f43f5e;
+  --color-success: #22c55e;
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root {
+  /* The one brand color; users no longer pick their own. */
+  --accent: #551a8b;
+  --accent-fg: #ffffff;
+  --dyn: 85 26 139;
+  --player-h: 0px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: dark;
+}
+
+:root,
+[data-theme='dark'] {
+  --bg: #08080d;
+  --surface: #111119;
+  --surface-2: #181822;
+  --elevated: #1f1f2b;
+  --line: rgb(255 255 255 / 0.08);
+  --fg: #f4f4f8;
+  --muted: #a1a1b5;
+  --subtle: #6b6b80;
+  --glass: rgb(17 17 25 / 0.72);
+  /* Liquid glass */
+  --lg-tint: rgb(28 28 38 / 0.42);
+  --lg-tint-strong: rgb(24 24 34 / 0.78);
+  --lg-rim: rgb(255 255 255 / 0.5);
+  --lg-rim-soft: rgb(255 255 255 / 0.06);
+  --lg-sheen: rgb(255 255 255 / 0.12);
+  --lg-shadow: 0 12px 40px -8px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.25);
+  --lg-active: rgb(255 255 255 / 0.13);
+}
+
+[data-theme='light'] {
+  --bg: #f6f6fa;
+  --surface: #ffffff;
+  --surface-2: #f0f0f6;
+  --elevated: #ffffff;
+  --line: rgb(15 15 30 / 0.09);
+  --fg: #12121c;
+  --muted: #5d5d72;
+  --subtle: #9090a4;
+  --glass: rgb(255 255 255 / 0.75);
+  --lg-tint: rgb(255 255 255 / 0.5);
+  --lg-tint-strong: rgb(255 255 255 / 0.82);
+  --lg-rim: rgb(255 255 255 / 0.95);
+  --lg-rim-soft: rgb(255 255 255 / 0.25);
+  --lg-sheen: rgb(255 255 255 / 0.45);
+  --lg-shadow: 0 12px 40px -10px rgb(20 20 40 / 0.28), 0 2px 6px rgb(20 20 40 / 0.08);
+  --lg-active: rgb(15 15 30 / 0.08);
+  color-scheme: light;
+}
+
+/*
+ * #551a8b is too dark to read as text or thin icons on the dark theme, so accent-colored text there uses
+ * a lifted tint of the same purple. Filled buttons and surfaces keep the exact color.
+ */
+[data-theme='dark'] .text-accent,
+[data-theme='dark'] .\!text-accent {
+  color: color-mix(in oklab, var(--accent) 45%, white) !important;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+/* Persian digits look better with tabular figures in timers. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Liquid glass, in the spirit of iOS 26: a lightly tinted, strongly blurred and saturated pane with a
+ * bright rim that fades around the edge and a soft sheen on top. --lg-tint can be overridden per element.
+ */
+/* In the components layer so utilities such as `fixed` still win over its position: relative. */
+@layer components {
+  .liquid {
+    position: relative;
+    isolation: isolate;
+    background: var(--lg-tint);
+    backdrop-filter: blur(18px) saturate(190%) brightness(1.04);
+    -webkit-backdrop-filter: blur(18px) saturate(190%) brightness(1.04);
+    box-shadow: var(--lg-shadow);
+  }
+  .liquid-strong {
+    --lg-tint: var(--lg-tint-strong);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+  }
+  /* Rim light: a 1px gradient border, brightest at the top-left and bottom-right like light through glass. */
+  .liquid::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--lg-rim), var(--lg-rim-soft) 30%, var(--lg-rim-soft) 70%, var(--lg-rim));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.55;
+  }
+  /* Sheen: light pooling in the upper half of the pane, behind the content. */
+  .liquid::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(180deg, var(--lg-sheen), transparent 55%);
+    pointer-events: none;
+  }
+  /* The pill behind the selected item inside a glass bar. */
+  .liquid-active {
+    background: var(--lg-active);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
+  }
+}
+
+/* The app shell; see fixIOSViewport() in main.ts for --app-height. */
+.app-shell {
+  position: fixed;
+  inset: 0;
+}
+:root[style*='--app-height'] .app-shell {
+  bottom: auto;
+  height: var(--app-height);
+}
+
+/* Profile drawer slides in from the start edge. */
+.drawer-enter-active,
+.drawer-leave-active {
+  transition: transform 0.35s var(--ease-spring);
+}
+.drawer-enter-from,
+.drawer-leave-to {
+  transform: translateX(-100%);
+}
+[dir='rtl'] .drawer-enter-from,
+[dir='rtl'] .drawer-leave-to {
+  transform: translateX(100%);
+}
+
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+}
+
+/* Soft, artwork-tinted glow behind headers. */
+.dyn-gradient {
+  background: linear-gradient(180deg, rgb(var(--dyn) / 0.45) 0%, rgb(var(--dyn) / 0.12) 55%, transparent 100%);
+  transition: background 0.8s ease;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(127 127 150 / 0.35) transparent;
+}
+
+@utility pt-safe {
+  padding-top: var(--safe-top);
+}
+@utility pb-safe {
+  padding-bottom: var(--safe-bottom);
+}
+/* Floating bars sit a little above the home indicator, like the iOS 26 tab bar. */
+.pb-float {
+  padding-bottom: max(calc(var(--safe-bottom) - 6px), 12px);
+}
+
+input[type='range'].range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 h-11 font-semibold text-sm transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none select-none;
+}
+@utility btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 h-11 font-semibold text-sm transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none select-none bg-accent text-accent-fg hover:brightness-110;
+  box-shadow: 0 8px 24px -10px var(--accent);
+}
+@utility btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 h-11 font-semibold text-sm transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none select-none bg-fg/5 hover:bg-fg/10 text-fg;
+}
+@utility btn-danger {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 h-11 font-semibold text-sm transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none select-none bg-danger/15 text-danger hover:bg-danger/25;
+}
+@utility icon-btn {
+  @apply inline-flex items-center justify-center rounded-full size-10 text-muted hover:text-fg hover:bg-fg/10 transition active:scale-90 disabled:opacity-40;
+}
+@utility input {
+  @apply w-full h-12 rounded-xl bg-fg/5 border border-line px-4 text-fg placeholder:text-subtle outline-none transition focus:border-accent;
+}
+@utility label {
+  @apply block text-sm font-medium text-muted mb-1.5;
+}
+@utility card {
+  @apply rounded-2xl bg-surface border border-line;
+}
+@utility chip {
+  @apply inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-medium bg-fg/5 text-fg hover:bg-fg/10 transition whitespace-nowrap cursor-pointer;
+}
+@utility chip-active {
+  @apply bg-accent text-accent-fg hover:bg-accent;
+}
+
+/* Page/route transition */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.18s ease, transform 0.25s var(--ease-spring);
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-leave-to {
+  opacity: 0;
+}
+
+.sheet-enter-active,
+.sheet-leave-active {
+  transition: transform 0.38s var(--ease-spring), opacity 0.25s ease;
+}
+.sheet-enter-from,
+.sheet-leave-to {
+  transform: translateY(100%);
+  opacity: 0.6;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.pop-enter-active,
+.pop-leave-active {
+  transition: opacity 0.15s ease, transform 0.2s var(--ease-spring);
+}
+.pop-enter-from,
+.pop-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+@keyframes eq {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+.eq-bar {
+  animation: eq 0.9s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--fg) 5%, transparent);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+  animation: shimmer 1.4s infinite;
+}

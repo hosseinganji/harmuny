@@ -1,0 +1,30 @@
+{
+	frankenphp {
+		# Song downloads keep a PHP thread busy for the whole transfer; the default (2 per CPU) is far too few.
+		num_threads 24
+	}
+	# With an email Caddy falls back to ZeroSSL when Let's Encrypt refuses (e.g. its per-domain rate limit).
+	email {$ACME_EMAIL}
+}
+
+{$SERVER_NAME:localhost} {
+	encode zstd gzip
+
+	# Laravel API (and the /up health check).
+	@backend path /api/* /up
+	handle @backend {
+		root * /app/public
+		php_server
+	}
+
+	# The Vue PWA. Hashed assets are immutable; the service worker must always revalidate.
+	handle {
+		root * /app/spa
+		@immutable path /assets/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+		@sw path /sw.js /registerSW.js /manifest.webmanifest /index.html
+		header @sw Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

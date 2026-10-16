@@ -1,0 +1,93 @@
+# Production stack: web (API + PWA + automatic HTTPS), queue worker, scheduler, MySQL.
+x-app: &app
+  build: .
+  image: smart-music-player
+  restart: unless-stopped
+  env_file: .env
+  volumes:
+    # Audio cache, covers, avatars and the Telegram session live here.
+    - storage:/app/storage
+  depends_on:
+    mysql:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *app
+    environment:
+      CONTAINER_ROLE: app
+      SERVER_NAME: ${DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - storage:/app/storage
+      - caddy_data:/data
+      - caddy_config:/config
+
+  worker:
+    <<: *app
+    environment:
+      CONTAINER_ROLE: worker
+    # The base image's health check probes the web server, which these containers do not run.
+    healthcheck:
+      disable: true
+    command: php artisan queue:work --queue=default,covers --sleep=2 --timeout=3600 --tries=1 --max-time=3600
+
+  # Artwork downloads get their own worker so a long channel sync never delays them.
+  covers:
+    <<: *app
+    environment:
+      CONTAINER_ROLE: worker
+    # The base image's health check probes the web server, which these containers do not run.
+    healthcheck:
+      disable: true
+    command: php artisan queue:work --queue=covers --sleep=2 --tries=2 --max-time=3600
+
+  # Keeps a full copy of every song on this server (queued by music:prefetch every 10 minutes).
+  downloads:
+    <<: *app
+    environment:
+      CONTAINER_ROLE: worker
+    # The base image's health check probes the web server, which these containers do not run.
+    healthcheck:
+      disable: true
+    command: php artisan queue:work --queue=downloads --sleep=2 --timeout=900 --max-time=3600
+
+  scheduler:
+    <<: *app
+    environment:
+      CONTAINER_ROLE: scheduler
+    # The base image's health check probes the web server, which these containers do not run.
+    healthcheck:
+      disable: true
+    command: php artisan schedule:work
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-smart_music}
+      MYSQL_USER: ${DB_USERNAME:-smart_music}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD in .env}
+    # Sized for a small (1–2 GB) VPS: the music catalogue is tiny, so a small buffer pool is plenty.
+    command: >-
+      --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=192M --performance-schema=OFF --skip-name-resolve
+      --max-connections=80 --table-open-cache=400 --host-cache-size=0
+    volumes:
+      - mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  storage:
+  mysql:
+  caddy_data:
+  caddy_config:

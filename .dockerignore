@@ -1,0 +1,12 @@
+**/node_modules
+frontend/dist
+frontend/android
+backend/vendor
+backend/.env
+backend/storage/app/*
+backend/storage/logs/*
+backend/storage/framework/cache/*
+backend/storage/framework/views/*
+backend/database/*.sqlite
+.env
+.git
