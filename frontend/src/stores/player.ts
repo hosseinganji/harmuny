@@ -456,10 +456,12 @@ export const usePlayer = defineStore('player', () => {
       ['pause', () => pause()],
       ['previoustrack', () => prev()],
       ['nexttrack', () => next()],
-      ['seekbackward', (d) => seekBy(-(d.seekOffset ?? 10))],
-      ['seekforward', (d) => seekBy(d.seekOffset ?? 10)],
       ['seekto', (d) => d.seekTime !== undefined && seek(d.seekTime)],
     ]
+    // iOS shows ±10 s buttons instead of previous/next whenever seek handlers exist, so skip them there.
+    if (!/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+      handlers.push(['seekbackward', (d) => seekBy(-(d.seekOffset ?? 10))], ['seekforward', (d) => seekBy(d.seekOffset ?? 10)])
+    }
     for (const [action, handler] of handlers) {
       try {
         navigator.mediaSession.setActionHandler(action, handler)

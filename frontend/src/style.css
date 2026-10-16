@@ -29,6 +29,8 @@
   --color-danger: #f43f5e;
   --color-success: #22c55e;
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  /* The curve iOS uses for sheets and tab changes. */
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 :root {
@@ -272,19 +274,30 @@ input[type='range'].range {
   opacity: 0;
 }
 
-.sheet-enter-active,
+.sheet-enter-active {
+  transition: transform 0.55s var(--ease-sheet);
+}
 .sheet-leave-active {
-  transition: transform 0.38s var(--ease-spring), opacity 0.25s ease;
+  transition: transform 0.42s var(--ease-sheet);
 }
 .sheet-enter-from,
 .sheet-leave-to {
-  transform: translateY(100%);
-  opacity: 0.6;
+  transform: translateY(100%) !important;
+}
+.sheet-enter-active,
+.sheet-leave-active {
+  will-change: transform;
+}
+
+/* Now Playing follows the finger while dragged (--drag), then glides back or away. */
+.np-sheet {
+  transform: translateY(var(--drag, 0px));
+  transition: transform 0.45s var(--ease-sheet);
 }
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.35s var(--ease-sheet);
 }
 .fade-enter-from,
 .fade-leave-to {

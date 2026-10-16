@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Harmony</string>
+    <string name="title_activity_main">Harmony</string>
+    <string name="package_name">team.paystar.smartmusic</string>
+    <string name="custom_url_scheme">team.paystar.smartmusic</string>
+</resources>

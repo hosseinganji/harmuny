@@ -6,12 +6,28 @@ import { duration, num } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { usePlayer } from '@/stores/player'
 
-withDefaults(defineProps<{ up?: boolean; large?: boolean }>(), { up: true })
+const props = withDefaults(defineProps<{ up?: boolean; large?: boolean }>(), { up: true })
 
 const player = usePlayer()
 const open = ref(false)
 const root = ref<HTMLElement>()
-onClickOutside(root, () => (open.value = false))
+const panel = ref<HTMLElement>()
+onClickOutside(root, () => (open.value = false), { ignore: [panel] })
+
+// The panel floats above the page, centred on the button but kept inside the screen, so it is never
+// clipped by the player sheet or pushed off the edge.
+const PANEL_WIDTH = 256
+const MARGIN = 12
+const panelStyle = ref<Record<string, string>>({})
+function toggle() {
+  open.value = !open.value
+  const rect = root.value?.getBoundingClientRect()
+  if (!open.value || !rect) return
+  const left = Math.min(Math.max(rect.left + rect.width / 2 - PANEL_WIDTH / 2, MARGIN), innerWidth - PANEL_WIDTH - MARGIN)
+  panelStyle.value = props.up
+    ? { left: `${left}px`, bottom: `${innerHeight - rect.top + 8}px` }
+    : { left: `${left}px`, top: `${rect.bottom + 8}px` }
+}
 const now = ref(Date.now())
 useIntervalFn(() => (now.value = Date.now()), 1000)
 
@@ -31,16 +47,18 @@ function setSleep(v: number | 'track' | null) {
       class="icon-btn relative"
       :class="[large ? 'size-11' : 'size-9', player.sleep || player.rate !== 1 ? '!text-accent' : '']"
       :aria-label="t('player.options')"
-      @click="open = !open"
+      @click="toggle"
     >
       <Moon v-if="player.sleep" :class="large ? 'size-5.5' : 'size-4.5'" />
       <Gauge v-else :class="large ? 'size-5.5' : 'size-4.5'" />
     </button>
+    <Teleport to="body">
     <Transition name="pop">
       <div
         v-if="open"
-        class="absolute end-0 z-50 w-64 rounded-2xl border border-line bg-elevated p-3 shadow-2xl"
-        :class="up ? 'bottom-full mb-2' : 'top-full mt-2'"
+        ref="panel"
+        class="liquid liquid-strong fixed z-[80] w-64 rounded-3xl p-3"
+        :style="panelStyle"
       >
         <div class="mb-2 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-subtle">
           <Moon class="size-3.5" />{{ t('player.sleepTimer') }}
@@ -70,5 +88,6 @@ function setSleep(v: number | 'track' | null) {
         </div>
       </div>
     </Transition>
+    </Teleport>
   </div>
 </template>

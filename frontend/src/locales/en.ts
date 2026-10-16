@@ -8,7 +8,6 @@ export default {
   'nav.profile': 'Profile',
   'nav.admin': 'Admin',
   'online.title': 'Online now',
-  'online.count': '{n} online',
   'online.you': 'You',
 
   'common.cancel': 'Cancel',
@@ -286,9 +285,6 @@ export default {
   'eq.preset.custom': 'Custom',
   'drawer.viewProfile': 'View profile',
   'drawer.version': 'Version {v}',
-  'drawer.server': 'Server',
-  'drawer.songs': '{n} songs in the library',
-  'drawer.offline': 'Offline',
   'settings.appearance': 'Appearance',
   'settings.dark': 'Dark',
   'settings.light': 'Light',
