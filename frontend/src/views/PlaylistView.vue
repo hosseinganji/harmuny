@@ -9,13 +9,15 @@ import CoverMosaic from '@/components/CoverMosaic.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import Modal from '@/components/Modal.vue'
 import TrackCover from '@/components/TrackCover.vue'
+import SortSelect from '@/components/SortSelect.vue'
 import TrackList from '@/components/TrackList.vue'
 import { ApiError, coverUrl, withMediaKey } from '@/lib/api'
 import { usePageColor } from '@/lib/dynamicColor'
 import { duration, longDuration } from '@/lib/format'
 import { t } from '@/lib/i18n'
+import { sortTracks, useTrackSort } from '@/lib/sortTracks'
 import type { Playlist, RemoteTrack } from '@/lib/types'
-import { toRemote } from '@/stores/library'
+import { toRemote, useLibrary } from '@/stores/library'
 import { usePlaylists } from '@/stores/playlists'
 import { useUi } from '@/stores/ui'
 
@@ -31,7 +33,10 @@ const reordering = ref(false)
 const form = ref({ name: '', description: '', is_public: false })
 const busy = ref(false)
 
+const library = useLibrary()
 const tracks = computed<RemoteTrack[]>(() => (playlist.value?.tracks ?? []).map(toRemote))
+const sort = useTrackSort('playlist', 'natural')
+const sorted = computed(() => sortTracks(tracks.value, sort.value, library.playsOf))
 const order = ref<RemoteTrack[]>([])
 const total = computed(() => tracks.value.reduce((s, x) => s + x.duration, 0))
 const context = computed(() => ({ type: 'playlist' as const, id: props.id, name: playlist.value?.name }))
@@ -130,7 +135,7 @@ async function finishReorder() {
       </template>
     </CollectionHeader>
 
-    <CollectionActions :tracks="tracks" :context="context">
+    <CollectionActions :tracks="sorted" :context="context">
       <template v-if="playlist.is_owner">
         <button v-if="reordering" class="btn-primary h-9 px-4" @click="finishReorder"><Check class="size-4" />{{ t('common.done') }}</button>
         <button v-else-if="tracks.length > 1" class="icon-btn" :title="t('playlist.reorder')" @click="startReorder"><ArrowUpDown class="size-5" /></button>
@@ -143,6 +148,7 @@ async function finishReorder() {
       <RouterLink to="/search" class="btn-primary">{{ t('nav.search') }}</RouterLink>
     </EmptyState>
 
+    <div v-if="tracks.length > 1 && !reordering" class="px-4 pb-2 sm:px-6"><SortSelect v-model="sort" :natural-label="t('sort.playlistOrder')" /></div>
     <div v-if="reordering" class="px-2 sm:px-4">
       <Draggable v-model="order" item-key="entry_id" handle=".drag" :animation="180" ghost-class="opacity-30">
         <template #item="{ element }: { element: RemoteTrack }">
@@ -160,7 +166,7 @@ async function finishReorder() {
     </div>
     <div v-else class="px-2 sm:px-4">
       <TrackList
-        :tracks="tracks"
+        :tracks="sorted"
         numbered
         show-album
         :context="context"

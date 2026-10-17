@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ArrowDownCircle, CheckCircle2, Heart, ListEnd, ListStart, MoreHorizontal, Pause, Play } from 'lucide-vue-next'
+import { ArrowDownCircle, CheckCircle2, Headphones, Heart, ListEnd, ListStart, MoreHorizontal, Pause, Play } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import { duration, num } from '@/lib/format'
+import { count, duration, num } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import type { Track } from '@/lib/types'
 import { useDownloads } from '@/stores/downloads'
@@ -20,6 +20,8 @@ const downloads = useDownloads()
 const isCurrent = computed(() => player.track && trackKey(player.track) === trackKey(props.track))
 // Lists can hold an older copy; the catalog has the latest edit.
 const shown = computed(() => (props.track.kind === 'remote' ? library.get(props.track.id) ?? props.track : props.track))
+const plays = computed(() => library.playsOf(props.track))
+const showPlays = computed(() => plays.value > library.playBadgeMin)
 const progress = computed(() => (props.track.kind === 'remote' ? downloads.progress.get(props.track.id) : undefined))
 
 function onClick() {
@@ -129,6 +131,9 @@ const armed = computed(() => Math.abs(dx.value) >= SWIPE_TRIGGER)
         <CheckCircle2 v-if="track.kind === 'remote' && downloads.sizes.has(track.id)" class="size-3.5 shrink-0 text-accent" />
         <span v-if="track.kind === 'local'" class="rounded bg-fg/10 px-1 text-[10px] font-semibold uppercase">{{ t('local.badge') }}</span>
         <span class="truncate">{{ shown.artist ?? t('track.unknownArtist') }}</span>
+        <span v-if="showPlays" class="flex shrink-0 items-center gap-1 text-xs text-subtle tabular" :title="t('track.plays', { n: plays })">
+          <span aria-hidden="true">·</span><Headphones class="size-3" />{{ count(plays) }}
+        </span>
       </div>
     </div>
 

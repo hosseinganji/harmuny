@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import CollectionActions from '@/components/CollectionActions.vue'
 import CollectionHeader from '@/components/CollectionHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import SortSelect from '@/components/SortSelect.vue'
 import TrackCover from '@/components/TrackCover.vue'
 import TrackList from '@/components/TrackList.vue'
 import { coverUrl } from '@/lib/api'
@@ -11,6 +12,7 @@ import { cachedGet } from '@/lib/cached'
 import { usePageColor } from '@/lib/dynamicColor'
 import { longDuration } from '@/lib/format'
 import { t } from '@/lib/i18n'
+import { sortTracks, useTrackSort } from '@/lib/sortTracks'
 import type { ApiTrack, RemoteTrack } from '@/lib/types'
 import { useLibrary } from '@/stores/library'
 
@@ -19,10 +21,13 @@ const library = useLibrary()
 const fetched = ref<RemoteTrack[] | null>(null)
 
 // The local catalog answers instantly; the server adds play-count ordering.
-const tracks = computed(() => fetched.value ?? library.byArtist(props.name))
+const all = computed(() => fetched.value ?? library.byArtist(props.name))
+// An artist's songs open most-played first.
+const sort = useTrackSort('artist', 'popular')
+const tracks = computed(() => sortTracks(all.value, sort.value, library.playsOf))
 const coverId = computed(() => tracks.value.find((x) => x.has_cover)?.id ?? null)
 const total = computed(() => tracks.value.reduce((s, x) => s + x.duration, 0))
-const plays = computed(() => tracks.value.reduce((s, x) => s + x.play_count, 0))
+const plays = computed(() => tracks.value.reduce((s, x) => s + library.playsOf(x), 0))
 
 usePageColor(computed(() => (coverId.value ? coverUrl(coverId.value) : null)))
 
@@ -48,7 +53,10 @@ onMounted(async () => {
       </template>
     </CollectionHeader>
     <CollectionActions :tracks="tracks" :context="{ type: 'artist', id: name, name }" />
-    <h2 class="px-4 pb-1 text-xl font-bold sm:px-6">{{ t('artist.popular') }}</h2>
+    <div class="flex items-center justify-between gap-3 px-4 pb-2 sm:px-6">
+      <h2 class="text-xl font-bold">{{ t('artist.popular') }}</h2>
+      <SortSelect v-model="sort" />
+    </div>
     <div class="px-2 sm:px-4">
       <TrackList :tracks="tracks" numbered show-album :context="{ type: 'artist', id: name, name }" />
     </div>

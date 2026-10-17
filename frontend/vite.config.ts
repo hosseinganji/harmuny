@@ -9,6 +9,13 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
+      // version.json tells running copies of the app whether a newer version is on the server.
+      {
+        name: 'version-file',
+        generateBundle() {
+          this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: process.env.npm_package_version ?? '1.0.0' }) })
+        },
+      },
       vue(),
       tailwindcss(),
       VitePWA({

@@ -35,9 +35,9 @@
 
 :root {
   /* The one brand color; users no longer pick their own. */
-  --accent: #ff1500;
+  --accent: #e8604c;
   --accent-fg: #ffffff;
-  --dyn: 255 21 0;
+  --dyn: 232 96 76;
   --player-h: 0px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);

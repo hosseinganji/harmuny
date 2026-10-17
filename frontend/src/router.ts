@@ -41,6 +41,7 @@ const router = createRouter({
         { path: '', name: 'admin', component: () => import('@/views/admin/AdminDashboard.vue') },
         { path: 'users', name: 'admin-users', component: () => import('@/views/admin/AdminUsers.vue') },
         { path: 'telegram', name: 'admin-telegram', component: () => import('@/views/admin/AdminTelegram.vue') },
+        { path: 'reports', name: 'admin-reports', component: () => import('@/views/admin/AdminReports.vue') },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },

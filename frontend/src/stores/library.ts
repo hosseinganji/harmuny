@@ -16,6 +16,13 @@ export const useLibrary = defineStore('library', () => {
   const syncing = ref(false)
   const liked = ref<Set<number>>(new Set())
   let searchIndex: Map<number, string> | null = null
+  /** Lists show a song's play count once it passes this (PLAY_COUNT_BADGE_MIN on the server). */
+  const playBadgeMin = ref(10)
+
+  /** The freshest play count: lists may hold an older copy of the track than the catalog. */
+  function playsOf(track: Track): number {
+    return track.kind === 'remote' ? (tracks.value.get(track.id)?.play_count ?? track.play_count ?? 0) : 0
+  }
 
   const list = computed(() =>
     [...tracks.value.values()].sort((a, b) => (b.posted_at ?? '').localeCompare(a.posted_at ?? '') || b.id - a.id),
@@ -36,6 +43,7 @@ export const useLibrary = defineStore('library', () => {
 
   async function load() {
     if (loaded.value) return
+    playBadgeMin.value = (await kv.get<number>('library.playBadgeMin')) ?? playBadgeMin.value
     const rows = await db.tracks.toArray()
     tracks.value = new Map(rows.map((t) => [t.id, t]))
     liked.value = new Set((await kv.get<number[]>('likes')) ?? [])
@@ -49,10 +57,17 @@ export const useLibrary = defineStore('library', () => {
     try {
       await load()
       const since = await kv.get<string>('library.since')
-      const res = await api.get<{ server_time: string; full: boolean; tracks: ApiTrack[]; deleted: number[] }>(
-        '/library/sync', since ? { since } : undefined,
-      )
+      const res = await api.get<{
+        server_time: string; full: boolean; tracks: ApiTrack[]; deleted: number[]
+        play_counts?: Record<string, number> | []; play_badge_min?: number
+      }>('/library/sync', since ? { since } : undefined)
       const incoming = res.tracks.map(toRemote)
+      // Play counts arrive in full each time (they don't change updated_at); fold them into the catalog.
+      const counts = Array.isArray(res.play_counts) ? {} : (res.play_counts ?? {})
+      if (res.play_badge_min !== undefined) {
+        playBadgeMin.value = res.play_badge_min
+        await kv.set('library.playBadgeMin', res.play_badge_min)
+      }
       await db.transaction('rw', db.tracks, async () => {
         if (res.full) await db.tracks.clear()
         await db.tracks.bulkPut(incoming)
@@ -61,6 +76,16 @@ export const useLibrary = defineStore('library', () => {
       const map = res.full ? new Map<number, RemoteTrack>() : tracks.value
       for (const t of incoming) map.set(t.id, t)
       for (const id of res.deleted) map.delete(id)
+      const changed: RemoteTrack[] = []
+      for (const t of map.values()) {
+        const n = counts[t.id] ?? 0
+        if (t.play_count !== n) {
+          const updated = { ...t, play_count: n }
+          map.set(t.id, updated)
+          changed.push(updated)
+        }
+      }
+      if (changed.length) await db.tracks.bulkPut(changed)
       tracks.value = map
       triggerRef(tracks)
       searchIndex = null
@@ -185,7 +210,7 @@ export const useLibrary = defineStore('library', () => {
   }
 
   return {
-    tracks, list, artists, loaded, syncing, liked, likedTracks,
+    tracks, list, artists, loaded, syncing, liked, likedTracks, playBadgeMin, playsOf,
     load, sync, syncLikes, forget, get, remember, update, isLiked, toggleLike, search, searchArtists, byArtist,
   }
 })

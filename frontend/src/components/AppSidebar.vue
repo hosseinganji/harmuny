@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Download, HardDrive, Heart, History, Home, Library, ListMusic, Plus, Search, Settings, Shield, UsersRound } from 'lucide-vue-next'
+import { BarChart3, Download, HardDrive, Heart, History, Home, Library, ListMusic, Plus, Search, Settings, Shield, UsersRound } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { t } from '@/lib/i18n'
@@ -49,9 +49,17 @@ function active(to: string, exact = false) {
       </RouterLink>
       <RouterLink
         v-if="auth.isAdmin"
+        to="/admin/reports"
+        class="flex items-center gap-4 rounded-xl px-3 py-2.5 font-semibold transition"
+        :class="route.path.startsWith('/admin/reports') ? 'bg-fg/10 text-fg' : 'text-muted hover:text-fg'"
+      >
+        <BarChart3 class="size-5.5" />{{ t('reports.title') }}
+      </RouterLink>
+      <RouterLink
+        v-if="auth.isAdmin"
         to="/admin"
         class="flex items-center gap-4 rounded-xl px-3 py-2.5 font-semibold transition"
-        :class="route.path.startsWith('/admin') ? 'bg-fg/10 text-fg' : 'text-muted hover:text-fg'"
+        :class="route.path.startsWith('/admin') && !route.path.startsWith('/admin/reports') ? 'bg-fg/10 text-fg' : 'text-muted hover:text-fg'"
       >
         <Shield class="size-5.5" />{{ t('nav.admin') }}
       </RouterLink>

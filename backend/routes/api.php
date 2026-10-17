@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\ChannelController;
+use App\Http\Controllers\Api\Admin\ReportsController;
 use App\Http\Controllers\Api\Admin\StatsController;
 use App\Http\Controllers\Api\Admin\TelegramController;
 use App\Http\Controllers\Api\Admin\TrackAdminController;
@@ -74,6 +75,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
     Route::prefix('admin')->middleware('admin')->group(function () {
         Route::get('stats', StatsController::class);
+        Route::get('reports', ReportsController::class);
 
         Route::get('users', [UserController::class, 'index']);
         Route::post('users', [UserController::class, 'store']);

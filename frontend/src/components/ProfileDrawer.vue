@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onKeyStroke } from '@vueuse/core'
-import { ChevronRight, Download, HardDrive, Heart, History, LogOut, Settings, Shield } from 'lucide-vue-next'
-import { computed, watch } from 'vue'
+import { BarChart3, ChevronRight, Download, HardDrive, Heart, History, LogOut, Settings, Shield } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Avatar from '@/components/Avatar.vue'
 import { t } from '@/lib/i18n'
@@ -21,8 +21,39 @@ const items = computed(() => [
   { to: '/library/device', icon: HardDrive, label: t('library.device') },
   { to: '/library/history', icon: History, label: t('library.history') },
   { to: '/settings', icon: Settings, label: t('settings.title') },
-  ...(auth.isAdmin ? [{ to: '/admin', icon: Shield, label: t('nav.admin') }] : []),
+  // Admins only: the reports, and the rest of the admin area.
+  ...(auth.isAdmin
+    ? [
+        { to: '/admin/reports', icon: BarChart3, label: t('reports.title') },
+        { to: '/admin', icon: Shield, label: t('nav.admin') },
+      ]
+    : []),
 ])
+
+// Compare this copy of the app with the version the server has now (version.json is never cached).
+const latest = ref<string | null>(null)
+const isNewer = (a: string, b: string) => {
+  const [x, y] = [a, b].map((v) => v.split('.').map(Number))
+  for (let i = 0; i < 3; i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0)
+  return false
+}
+const updateAvailable = computed(() => !!latest.value && isNewer(latest.value, version))
+watch(() => ui.drawerOpen, async (open) => {
+  if (!open || !navigator.onLine) return
+  try {
+    const res = await fetch('/version.json', { cache: 'no-store' })
+    if (res.ok) latest.value = (await res.json()).version ?? null
+  } catch {
+    // Offline or blocked: show no badge.
+  }
+})
+function update() {
+  location.reload()
+}
+
+// Reports live under /admin but have their own entry, so Admin is not lit up there too.
+const isActive = (to: string) =>
+  to === '/admin' ? route.path.startsWith('/admin') && !route.path.startsWith('/admin/reports') : route.path.startsWith(to)
 
 const close = () => (ui.drawerOpen = false)
 watch(() => route.fullPath, close)
@@ -66,7 +97,7 @@ async function logout() {
             :key="item.to"
             :to="item.to"
             class="flex items-center gap-4 rounded-2xl px-3 py-3 font-semibold transition hover:bg-fg/5 active:scale-[0.98]"
-            :class="route.path.startsWith(item.to) ? 'liquid-active text-accent' : ''"
+            :class="isActive(item.to) ? 'liquid-active text-accent' : ''"
           >
             <component :is="item.icon" class="size-5" />
             {{ item.label }}
@@ -80,7 +111,11 @@ async function logout() {
             <img src="/logo.png" class="size-9 rounded-[22%]" alt="" />
             <div class="min-w-0">
               <div class="font-bold text-fg">{{ t('app.name') }}</div>
-              <div dir="ltr" class="text-start">{{ t('drawer.version', { v: version }) }} · {{ buildDate }}</div>
+              <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span>{{ t('drawer.version', { v: version }) }} · {{ buildDate }}</span>
+                <span v-if="latest && !updateAvailable" class="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-bold text-success">{{ t('drawer.latest') }}</span>
+                <button v-else-if="updateAvailable" class="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-white" @click="update">{{ t('drawer.update', { v: latest! }) }}</button>
+              </div>
             </div>
           </div>
         </footer>

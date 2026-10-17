@@ -65,6 +65,9 @@ class TrackController extends Controller
         return response()->json([
             'server_time' => $serverTime->toIso8601String(),
             'full' => ! $since,
+            // Plays don't touch updated_at (it versions artwork), so counts travel separately, always in full.
+            'play_counts' => Track::query()->where('play_count', '>', 0)->pluck('play_count', 'id'),
+            'play_badge_min' => config('music.play_count_badge_min'),
             'tracks' => TrackResource::collection($tracks->reject->trashed()->values()),
             'deleted' => $tracks->filter->trashed()->pluck('id')->values(),
         ]);
