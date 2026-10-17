@@ -2,7 +2,7 @@
 import { Home, Library, Search } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { t } from '@/lib/i18n'
+import { isRtl, t } from '@/lib/i18n'
 
 const route = useRoute()
 const items = computed(() => [
@@ -12,7 +12,7 @@ const items = computed(() => [
 ])
 const activeIndex = computed(() => items.value.findIndex((item) => item.match(route.path)))
 // translateX runs left-to-right even in RTL, so flip it there.
-const dir = computed(() => (document.documentElement.dir === 'rtl' ? -1 : 1))
+const dir = computed(() => (isRtl.value ? -1 : 1))
 </script>
 
 <template>

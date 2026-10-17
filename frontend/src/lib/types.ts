@@ -108,6 +108,7 @@ export interface Lyrics {
 
 export interface Preferences {
   theme?: 'dark' | 'light' | 'system'
+  language?: 'en' | 'fa'
   dynamicColor?: boolean
   autoDownloadLiked?: boolean
 }

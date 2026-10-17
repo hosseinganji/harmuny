@@ -2,7 +2,7 @@ import { usePreferredDark } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { api } from '@/lib/api'
-import { applyLocale } from '@/lib/i18n'
+import { applyLocale, defaultLocale } from '@/lib/i18n'
 import type { Preferences } from '@/lib/types'
 
 const KEY = 'smp.prefs'
@@ -11,6 +11,7 @@ const KEY = 'smp.prefs'
 export const useSettings = defineStore('settings', () => {
   const prefs = ref<Preferences>({
     theme: 'dark',
+    language: defaultLocale(),
     dynamicColor: true,
     autoDownloadLiked: false,
     ...JSON.parse(localStorage.getItem(KEY) ?? '{}'),
@@ -24,7 +25,7 @@ export const useSettings = defineStore('settings', () => {
   function apply() {
     const root = document.documentElement
     root.dataset.theme = theme.value
-    applyLocale()
+    applyLocale(prefs.value.language ?? defaultLocale())
     document.querySelector('meta[name=theme-color]')?.setAttribute('content', theme.value === 'dark' ? '#08080d' : '#f6f6fa')
   }
 
