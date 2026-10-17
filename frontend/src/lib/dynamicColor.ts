@@ -1,7 +1,7 @@
 import { onBeforeUnmount, ref, watch, type Ref } from 'vue'
 import { extractColor } from './color'
 
-const DEFAULT = '255 21 0'
+const DEFAULT = '232 96 76'
 const playerColor = ref(DEFAULT)
 const overrides: Ref<string | null>[] = []
 

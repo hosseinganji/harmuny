@@ -4,10 +4,12 @@ import { computed, onMounted, ref } from 'vue'
 import CollectionActions from '@/components/CollectionActions.vue'
 import DeviceSyncPanel from '@/components/DeviceSyncPanel.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import SortSelect from '@/components/SortSelect.vue'
 import TrackList from '@/components/TrackList.vue'
 import { db } from '@/lib/db'
 import { bytes } from '@/lib/format'
 import { t } from '@/lib/i18n'
+import { sortTracks, useTrackSort } from '@/lib/sortTracks'
 import type { RemoteTrack } from '@/lib/types'
 import { useDownloads } from '@/stores/downloads'
 import { useLibrary } from '@/stores/library'
@@ -18,13 +20,15 @@ const quota = ref<{ usage: number; quota: number } | null>(null)
 const order = ref<number[]>([])
 
 // Newest download first; songs downloaded while this page is open go to the top.
-const tracks = computed(() => {
+const byDate = computed(() => {
   const rank = new Map(order.value.map((id, i) => [id, i]))
   return [...downloads.sizes.keys()]
     .sort((a, b) => (rank.get(a) ?? -1) - (rank.get(b) ?? -1))
     .map((id) => library.get(id))
     .filter(Boolean) as RemoteTrack[]
 })
+const sort = useTrackSort('downloads', 'natural')
+const tracks = computed(() => sortTracks(byDate.value, sort.value, library.playsOf))
 
 onMounted(async () => {
   order.value = (await db.downloads.orderBy('downloadedAt').reverse().primaryKeys()) as number[]
@@ -57,6 +61,7 @@ async function clearAll() {
   <DeviceSyncPanel class="mx-4 mt-4 sm:mx-6" />
   <CollectionActions :tracks="tracks" :context="{ type: 'downloads', name: t('library.downloads') }" :downloadable="false" />
   <EmptyState v-if="!tracks.length" :icon="Download" :title="t('downloads.empty')" :text="t('downloads.emptyHint')" />
+  <div v-if="tracks.length > 1" class="px-4 pb-2 sm:px-6"><SortSelect v-model="sort" :natural-label="t('sort.dateDownloaded')" /></div>
   <div class="px-2 sm:px-4">
     <TrackList :tracks="tracks" :context="{ type: 'downloads', name: t('library.downloads') }" />
   </div>

@@ -37,6 +37,12 @@ return [
     // The bot mode talks HTTPS to the Bot API, which an MTProxy cannot carry.
     'telegram_mtproxy' => env('TELEGRAM_MTPROXY'),
 
+    // Song lists show a song's play count once it has been played more than this many times.
+    'play_count_badge_min' => (int) env('PLAY_COUNT_BADGE_MIN', 10),
+
+    // Admin reports bucket days and hours in this timezone (the listeners' local time).
+    'reports_timezone' => env('REPORTS_TIMEZONE', 'Asia/Tehran'),
+
     // Minutes between automatic incremental channel syncs.
     'sync_interval' => (int) env('TELEGRAM_SYNC_INTERVAL', 10),
 

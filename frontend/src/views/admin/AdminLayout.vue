@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LayoutDashboard, Send, Users } from 'lucide-vue-next'
+import { BarChart3, LayoutDashboard, Send, Users } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { t } from '@/lib/i18n'
@@ -7,6 +7,7 @@ import { t } from '@/lib/i18n'
 const route = useRoute()
 const tabs = computed(() => [
   { name: 'admin', label: t('admin.dashboard'), icon: LayoutDashboard },
+  { name: 'admin-reports', label: t('reports.title'), icon: BarChart3 },
   { name: 'admin-users', label: t('admin.users'), icon: Users },
   { name: 'admin-telegram', label: t('admin.telegram'), icon: Send },
 ])

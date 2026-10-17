@@ -42,10 +42,11 @@ const shelves = computed(() => {
   if (!h) return []
   const s: { key: string; title: string; tracks: RemoteTrack[]; context: PlayContext }[] = [
     { key: 'recent', title: t('home.jumpBackIn'), tracks: library.remember(h.recently_played), context: { type: 'home', name: t('home.jumpBackIn') } },
+    // Everyone's most played songs, right after the user's own recent ones.
+    { key: 'popular', title: t('home.mostPlayed'), tracks: library.remember(h.popular), context: { type: 'home', name: t('home.mostPlayed') } },
     { key: 'new', title: t('home.recentlyAdded'), tracks: library.remember(h.recently_added), context: { type: 'home', name: t('home.recentlyAdded') } },
     { key: 'top', title: t('home.yourTop'), tracks: library.remember(h.your_top), context: { type: 'home', name: t('home.yourTop') } },
     { key: 'discover', title: t('home.discover'), tracks: library.remember(h.discover), context: { type: 'home', name: t('home.discover') } },
-    { key: 'popular', title: t('home.popular'), tracks: library.remember(h.popular), context: { type: 'home', name: t('home.popular') } },
   ]
   return s.filter((x) => x.tracks.length)
 })

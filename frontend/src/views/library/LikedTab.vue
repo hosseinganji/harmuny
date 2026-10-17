@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { Heart } from 'lucide-vue-next'
+import { computed } from 'vue'
 import CollectionActions from '@/components/CollectionActions.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import SortSelect from '@/components/SortSelect.vue'
 import TrackList from '@/components/TrackList.vue'
 import { longDuration } from '@/lib/format'
 import { t } from '@/lib/i18n'
+import { sortTracks, useTrackSort } from '@/lib/sortTracks'
 import { useLibrary } from '@/stores/library'
 import { useSettings } from '@/stores/settings'
 
 const library = useLibrary()
 const settings = useSettings()
+const sort = useTrackSort('liked', 'natural')
+const tracks = computed(() => sortTracks(library.likedTracks, sort.value, library.playsOf))
 </script>
 
 <template>
@@ -24,7 +29,7 @@ const settings = useSettings()
       </p>
     </div>
   </header>
-  <CollectionActions :tracks="library.likedTracks" :context="{ type: 'liked', name: t('library.liked') }">
+  <CollectionActions :tracks="tracks" :context="{ type: 'liked', name: t('library.liked') }">
     <label class="flex cursor-pointer items-center gap-2 text-sm text-muted">
       <span class="hidden sm:inline">{{ t('settings.autoDownloadLiked') }}</span>
       <span class="sm:hidden">{{ t('settings.autoDownloadShort') }}</span>
@@ -37,7 +42,8 @@ const settings = useSettings()
     </label>
   </CollectionActions>
   <EmptyState v-if="!library.likedTracks.length" :icon="Heart" :title="t('library.noLiked')" :text="t('library.noLikedHint')" />
+  <div v-if="tracks.length > 1" class="px-4 pb-2 sm:px-6"><SortSelect v-model="sort" :natural-label="t('sort.dateLiked')" /></div>
   <div class="px-2 sm:px-4">
-    <TrackList :tracks="library.likedTracks" show-album :context="{ type: 'liked', name: t('library.liked') }" />
+    <TrackList :tracks="tracks" show-album :context="{ type: 'liked', name: t('library.liked') }" />
   </div>
 </template>
