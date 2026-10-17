@@ -26,6 +26,7 @@ const router = createRouter({
     { path: '/artist', name: 'artist', component: () => import('@/views/ArtistView.vue'), props: (r) => ({ name: String(r.query.name ?? '') }) },
     { path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue') },
     { path: '/settings', name: 'settings', component: () => import('@/views/SettingsView.vue') },
+    { path: '/settings/equalizer', name: 'equalizer', component: () => import('@/views/EqualizerView.vue') },
     {
       path: '/admin',
       component: () => import('@/views/admin/AdminLayout.vue'),
