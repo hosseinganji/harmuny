@@ -48,6 +48,10 @@ export function trackKey(track: Track) {
 export const usePlayer = defineStore('player', () => {
   const audio = new Audio()
   audio.preload = 'auto'
+  // Audio Session API (Safari 16.4+): mark this as music playback, so iOS keeps the sound going
+  // with the screen locked or the app in the background, as it does for native music apps.
+  const audioSession = (navigator as { audioSession?: { type: string } }).audioSession
+  if (audioSession) audioSession.type = 'playback'
 
   const queue = shallowRef<QueueItem[]>([])
   const index = ref(-1)
@@ -450,18 +454,22 @@ export const usePlayer = defineStore('player', () => {
     }
   }
 
-  if ('mediaSession' in navigator) {
-    const handlers: [MediaSessionAction, MediaSessionActionHandler][] = [
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
+
+  // Lock screen / Control Center buttons. iOS drops handlers registered before the element is
+  // "Now Playing" and falls back to ±10 s buttons, so (re)register them every time playback starts.
+  function registerMediaHandlers() {
+    if (!('mediaSession' in navigator)) return
+    const handlers: [MediaSessionAction, MediaSessionActionHandler | null][] = [
       ['play', () => play()],
       ['pause', () => pause()],
       ['previoustrack', () => prev()],
       ['nexttrack', () => next()],
       ['seekto', (d) => d.seekTime !== undefined && seek(d.seekTime)],
+      // iOS shows ±10 s instead of previous/next whenever seek handlers exist, so clear them there.
+      ['seekbackward', isIOS ? null : (d) => seekBy(-(d.seekOffset ?? 10))],
+      ['seekforward', isIOS ? null : (d) => seekBy(d.seekOffset ?? 10)],
     ]
-    // iOS shows ±10 s buttons instead of previous/next whenever seek handlers exist, so skip them there.
-    if (!/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-      handlers.push(['seekbackward', (d) => seekBy(-(d.seekOffset ?? 10))], ['seekforward', (d) => seekBy(d.seekOffset ?? 10)])
-    }
     for (const [action, handler] of handlers) {
       try {
         navigator.mediaSession.setActionHandler(action, handler)
@@ -470,6 +478,9 @@ export const usePlayer = defineStore('player', () => {
       }
     }
   }
+  registerMediaHandlers()
+  audio.addEventListener('playing', registerMediaHandlers)
+
   watch(playing, (p) => {
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = p ? 'playing' : 'paused'
   })

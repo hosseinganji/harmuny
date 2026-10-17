@@ -66,7 +66,7 @@ export const useEqualizer = defineStore('equalizer', () => {
     const audio = usePlayer().audio
     // Needed when the server is on another origin (the Android app); same-origin is unaffected.
     audio.crossOrigin = 'anonymous'
-    ctx = new AudioContext()
+    ctx = new AudioContext({ latencyHint: 'playback' })
     const source = ctx.createMediaElementSource(audio)
     preamp = ctx.createGain()
     filters = BANDS.map((freq, i) => {
@@ -91,8 +91,15 @@ export const useEqualizer = defineStore('equalizer', () => {
     node.connect(mixer).connect(panner).connect(output).connect(ctx.destination)
     apply()
 
-    // Playback may start before the context does (and it suspends with the page); keep it running.
-    audio.addEventListener('play', () => ctx?.state !== 'running' && ctx?.resume())
+    // iOS suspends ("interrupts") the context when the screen locks or the app goes to the background,
+    // which silences the song while it keeps playing. Wake it straight back up whenever music is playing.
+    const keepRunning = () => {
+      if (ctx && ctx.state !== 'running' && !audio.paused) ctx.resume().catch(() => {})
+    }
+    ctx.addEventListener('statechange', keepRunning)
+    audio.addEventListener('play', keepRunning)
+    audio.addEventListener('playing', keepRunning)
+    document.addEventListener('visibilitychange', keepRunning)
   }
 
   function apply() {
