@@ -35,9 +35,9 @@
 
 :root {
   /* The one brand color; users no longer pick their own. */
-  --accent: #551a8b;
+  --accent: #ff1500;
   --accent-fg: #ffffff;
-  --dyn: 85 26 139;
+  --dyn: 255 21 0;
   --player-h: 0px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -85,15 +85,6 @@
   color-scheme: light;
 }
 
-/*
- * #551a8b is too dark to read as text or thin icons on the dark theme, so accent-colored text there uses
- * a lifted tint of the same purple. Filled buttons and surfaces keep the exact color.
- */
-[data-theme='dark'] .text-accent,
-[data-theme='dark'] .\!text-accent {
-  color: color-mix(in oklab, var(--accent) 45%, white) !important;
-}
-
 html,
 body {
   background: var(--bg);
@@ -106,6 +97,11 @@ body {
 
 body {
   min-height: 100dvh;
+}
+
+/* Persian: Vazirmatn first, so Persian text gets its proper shapes and spacing on every device. */
+:root[lang='fa'] body {
+  font-family: 'Vazirmatn Variable', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Persian digits look better with tabular figures in timers. */

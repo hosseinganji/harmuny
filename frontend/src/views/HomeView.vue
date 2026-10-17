@@ -71,7 +71,7 @@ onMounted(load)
   <div class="dyn-gradient pb-6">
     <div class="flex items-center gap-3 px-4 pt-6 sm:px-6 sm:pt-10">
       <div class="min-w-0 flex-1">
-        <h1 class="text-3xl font-black tracking-tight sm:text-4xl">{{ greeting }}<span class="text-muted">, {{ auth.user?.name?.split(' ')[0] }}</span></h1>
+        <h1 class="text-3xl font-black tracking-tight sm:text-4xl">{{ greeting }}<span class="text-muted">{{ t('home.greetingSep') }}{{ auth.user?.name?.split(' ')[0] }}</span></h1>
         <p class="mt-1 text-sm text-muted">
           {{ t('home.librarySize', { n: library.tracks.size }) }}
           <RefreshCw v-if="library.syncing" class="ms-1 inline size-3.5 animate-spin" />

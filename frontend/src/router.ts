@@ -28,6 +28,12 @@ const router = createRouter({
     { path: '/settings', name: 'settings', component: () => import('@/views/SettingsView.vue') },
     { path: '/settings/equalizer', name: 'equalizer', component: () => import('@/views/EqualizerView.vue') },
     {
+      path: '/settings/:section(appearance|language|playback|storage|about)',
+      name: 'settings-section',
+      component: () => import('@/views/SettingsSectionView.vue'),
+      props: true,
+    },
+    {
       path: '/admin',
       component: () => import('@/views/admin/AdminLayout.vue'),
       meta: { admin: true },

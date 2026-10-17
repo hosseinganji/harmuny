@@ -8,8 +8,13 @@ const player = usePlayer()
 </script>
 
 <template>
-  <!-- Buttons never shrink (a squeezed play button turns oval on narrow phones); gaps and sizes adapt instead. -->
-  <div dir="ltr" class="flex items-center justify-center [&>button]:aspect-square [&>button]:shrink-0" :class="large ? 'gap-2.5 min-[400px]:gap-5 sm:gap-7' : 'gap-3'">
+  <!-- Buttons never shrink (a squeezed play button turns oval); in the big player they spread evenly across the row,
+       so narrow phones get as much space between them as the row allows. -->
+  <div
+    dir="ltr"
+    class="flex items-center [&>button]:aspect-square [&>button]:shrink-0"
+    :class="large ? 'mx-auto w-full max-w-[22rem] justify-between' : 'justify-center gap-3'"
+  >
     <button
       class="icon-btn relative"
       :class="[large ? 'size-11 min-[400px]:size-12' : 'size-9', player.shuffle ? '!text-accent' : '']"
