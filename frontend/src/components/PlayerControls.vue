@@ -8,10 +8,11 @@ const player = usePlayer()
 </script>
 
 <template>
-  <div dir="ltr" class="flex items-center justify-center" :class="large ? 'gap-5 sm:gap-7' : 'gap-3'">
+  <!-- Buttons never shrink (a squeezed play button turns oval on narrow phones); gaps and sizes adapt instead. -->
+  <div dir="ltr" class="flex items-center justify-center [&>button]:aspect-square [&>button]:shrink-0" :class="large ? 'gap-2.5 min-[400px]:gap-5 sm:gap-7' : 'gap-3'">
     <button
       class="icon-btn relative"
-      :class="[large ? 'size-12' : 'size-9', player.shuffle ? '!text-accent' : '']"
+      :class="[large ? 'size-11 min-[400px]:size-12' : 'size-9', player.shuffle ? '!text-accent' : '']"
       :aria-label="t('player.shuffle')"
       :aria-pressed="player.shuffle"
       @click="player.toggleShuffle()"
@@ -19,12 +20,12 @@ const player = usePlayer()
       <Shuffle :class="large ? 'size-6' : 'size-4.5'" />
       <span v-if="player.shuffle" class="absolute bottom-0.5 size-1 rounded-full bg-accent" />
     </button>
-    <button class="icon-btn text-fg" :class="large ? 'size-14' : 'size-9'" :aria-label="t('player.previous')" @click="player.prev()">
+    <button class="icon-btn text-fg" :class="large ? 'size-12 min-[400px]:size-14' : 'size-9'" :aria-label="t('player.previous')" @click="player.prev()">
       <SkipBack class="fill-current" :class="large ? 'size-8' : 'size-5'" />
     </button>
     <button
       class="flex items-center justify-center rounded-full bg-fg text-bg shadow-xl transition hover:scale-105 active:scale-95"
-      :class="large ? 'size-18' : 'size-10'"
+      :class="large ? 'size-17 min-[400px]:size-18' : 'size-10'"
       :aria-label="player.playing ? t('player.pause') : t('player.play')"
       @click="player.toggle()"
     >
@@ -32,12 +33,12 @@ const player = usePlayer()
       <Pause v-else-if="player.playing" class="fill-current" :class="large ? 'size-8' : 'size-5'" />
       <Play v-else class="translate-x-[1px] fill-current" :class="large ? 'size-8' : 'size-5'" />
     </button>
-    <button class="icon-btn text-fg" :class="large ? 'size-14' : 'size-9'" :aria-label="t('player.next')" @click="player.next()">
+    <button class="icon-btn text-fg" :class="large ? 'size-12 min-[400px]:size-14' : 'size-9'" :aria-label="t('player.next')" @click="player.next()">
       <SkipForward class="fill-current" :class="large ? 'size-8' : 'size-5'" />
     </button>
     <button
       class="icon-btn relative"
-      :class="[large ? 'size-12' : 'size-9', player.repeat !== 'off' ? '!text-accent' : '']"
+      :class="[large ? 'size-11 min-[400px]:size-12' : 'size-9', player.repeat !== 'off' ? '!text-accent' : '']"
       :aria-label="t('player.repeat.' + player.repeat)"
       @click="player.cycleRepeat()"
     >

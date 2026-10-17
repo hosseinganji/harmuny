@@ -83,11 +83,11 @@ onMounted(load)
       <!-- Liked songs gets the full width; the two below share a row. -->
       <RouterLink
         to="/library/liked"
-        class="col-span-2 flex h-24 items-center gap-4 overflow-hidden rounded-2xl bg-gradient-to-br from-accent to-[color-mix(in_oklab,var(--accent)_55%,#ff4fa3)] px-5 text-white shadow-lg transition active:scale-[0.98]"
+        class="col-span-2 flex h-[4.5rem] items-center gap-3.5 overflow-hidden rounded-2xl bg-gradient-to-br from-accent to-[color-mix(in_oklab,var(--accent)_55%,#ff4fa3)] px-5 text-white shadow-lg transition active:scale-[0.98]"
       >
-        <span class="flex size-12 items-center justify-center rounded-full bg-white/20"><Heart class="size-6 fill-current" /></span>
+        <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/20"><Heart class="size-5 fill-current" /></span>
         <span class="min-w-0 flex-1">
-          <span class="block text-lg font-black">{{ t('library.liked') }}</span>
+          <span class="block text-base font-black leading-tight">{{ t('library.liked') }}</span>
           <span class="block text-sm text-white/75">{{ t('home.likedCount', { n: count(library.liked.size) }) }}</span>
         </span>
         <ChevronRight class="size-6 text-white/70 rtl:rotate-180" />

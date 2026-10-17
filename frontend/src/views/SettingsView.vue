@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { Download, Monitor, Moon, Smartphone, Sun, Trash2 } from 'lucide-vue-next'
+import { ChevronRight, Download, Monitor, Moon, SlidersHorizontal, Smartphone, Sun, Trash2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import DeviceSyncPanel from '@/components/DeviceSyncPanel.vue'
-import EqualizerPanel from '@/components/EqualizerPanel.vue'
 import { isNative, savedApiBase, setApiBase } from '@/lib/config'
 import { db, kv } from '@/lib/db'
 import { t } from '@/lib/i18n'
 import { useLibrary } from '@/stores/library'
+import { useEqualizer } from '@/stores/equalizer'
 import { useSettings } from '@/stores/settings'
 import { useUi } from '@/stores/ui'
 
 const library = useLibrary()
 const settings = useSettings()
+const eq = useEqualizer()
 const ui = useUi()
 const server = ref(savedApiBase())
 
@@ -59,7 +60,16 @@ const themes = computed(() => [
 
   <!-- min-w-0 on the cards: the scrolling preset row must not widen the grid column past the screen. -->
   <div class="mx-auto grid max-w-5xl grid-cols-1 gap-4 px-4 sm:px-6 lg:grid-cols-2 [&>*]:min-w-0">
-    <EqualizerPanel class="lg:row-span-2" />
+    <!-- The equalizer has its own page -->
+    <RouterLink to="/settings/equalizer" class="card flex items-center gap-4 p-5 transition hover:bg-surface-2 active:scale-[0.99] lg:col-span-2">
+      <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-white"><SlidersHorizontal class="size-5" /></span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-lg font-bold">{{ t('eq.title') }}</span>
+        <span class="block truncate text-sm text-muted">{{ eq.state.enabled ? `${t('eq.on')} · ${t(`eq.preset.${eq.state.preset}`)}` : t('eq.openHint') }}</span>
+      </span>
+      <span class="text-xs font-semibold" :class="eq.state.enabled ? 'text-accent' : 'text-subtle'">{{ eq.state.enabled ? t('eq.on') : t('eq.off') }}</span>
+      <ChevronRight class="size-5 text-subtle rtl:rotate-180" />
+    </RouterLink>
 
     <!-- Appearance -->
     <section class="card space-y-5 p-5">

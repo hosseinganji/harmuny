@@ -100,8 +100,9 @@ function more(e: MouseEvent) {
         <div class="mx-auto flex w-full max-w-7xl flex-1 gap-10 overflow-hidden px-6 lg:px-12">
           <!-- Main column -->
           <div class="flex min-w-0 flex-1 flex-col lg:max-w-xl lg:justify-center">
-            <div class="relative flex min-h-0 flex-1 items-center justify-center py-4" @touchstart.passive="tab === 'art' && touchStart($event)" @touchmove.passive="tab === 'art' && touchMove($event)" @touchend="tab === 'art' && touchEnd()">
-              <div v-if="tab === 'art'" class="aspect-square w-full max-w-[min(100%,44vh)] lg:max-w-md">
+            <!-- A size container: the artwork is the largest square that fits, so it can never spill onto the title. -->
+            <div class="relative my-4 flex min-h-0 flex-1 items-center justify-center [container-type:size]" @touchstart.passive="tab === 'art' && touchStart($event)" @touchmove.passive="tab === 'art' && touchMove($event)" @touchend="tab === 'art' && touchEnd()">
+              <div v-if="tab === 'art'" class="size-[min(100cqw,100cqh)] lg:max-h-112 lg:max-w-112">
                 <TrackCover
                   :track="player.track"
                   size="fill"
