@@ -22,6 +22,7 @@ interface Channel {
   peer: string
   title: string | null
   username: string | null
+  kind: 'channel' | 'supergroup' | 'group'
   enabled: boolean
   sync_status: 'idle' | 'queued' | 'syncing' | 'error'
   sync_error: string | null
@@ -273,9 +274,9 @@ const statusBadge: Record<Channel['sync_status'], string> = {
         <p class="mb-4 text-sm text-muted">{{ t('telegram.channelsHint') }}</p>
         <p v-if="isBot" class="mb-4 rounded-xl bg-accent/10 p-3 text-sm">{{ t('telegram.bot.addAdminHint', { bot: '@' + (status.bot?.username ?? ''), mb: status.max_file_mb ?? 20 }) }}</p>
         <form class="flex flex-wrap gap-2" @submit.prevent="addChannel(newPeer)">
-          <input v-model="newPeer" class="input min-w-48 flex-1" dir="ltr" placeholder="@channel · https://t.me/channel · -100…" required />
+          <input v-model="newPeer" class="input min-w-48 flex-1" dir="ltr" placeholder="@channel · @group · https://t.me/… · -100…" required />
           <button class="btn-primary h-12" :disabled="busy"><Plus class="size-4" />{{ t('telegram.add') }}</button>
-          <button v-if="!isBot" type="button" class="btn-ghost h-12" @click="openPicker">{{ t('telegram.pick') }}</button>
+          <button type="button" class="btn-ghost h-12" @click="openPicker">{{ isBot ? t('telegram.bot.pick') : t('telegram.pick') }}</button>
         </form>
 
         <div class="mt-5 space-y-3">
@@ -284,6 +285,7 @@ const statusBadge: Record<Channel['sync_status'], string> = {
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
                   <span class="truncate font-bold">{{ c.title ?? c.peer }}</span>
+                  <span v-if="c.kind && c.kind !== 'channel'" class="rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-bold text-sky-400">{{ t('telegram.group') }}</span>
                   <span class="rounded-full px-2 py-0.5 text-[10px] font-bold" :class="statusBadge[c.sync_status]">{{ t('telegram.status.' + c.sync_status) }}</span>
                 </div>
                 <div class="text-xs text-subtle">
@@ -312,7 +314,7 @@ const statusBadge: Record<Channel['sync_status'], string> = {
     </template>
   </template>
 
-  <Modal :open="picking" :title="t('telegram.pick')" @close="picking = false">
+  <Modal :open="picking" :title="isBot ? t('telegram.bot.pick') : t('telegram.pick')" @close="picking = false">
     <div v-if="!dialogs" class="flex justify-center py-8"><Loader2 class="size-6 animate-spin text-muted" /></div>
     <div v-else class="space-y-1">
       <button
@@ -329,7 +331,7 @@ const statusBadge: Record<Channel['sync_status'], string> = {
         </div>
         <span v-if="!d.broadcast" class="text-xs text-subtle">{{ t('telegram.group') }}</span>
       </button>
-      <p v-if="!dialogs.length" class="py-6 text-center text-sm text-subtle">{{ t('telegram.noDialogs') }}</p>
+      <p v-if="!dialogs.length" class="py-6 text-center text-sm text-subtle">{{ isBot ? t('telegram.bot.noChats') : t('telegram.noDialogs') }}</p>
     </div>
   </Modal>
 </template>
