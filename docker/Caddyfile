@@ -8,6 +8,10 @@
 }
 
 {$SERVER_NAME:localhost} {
+	# www.example.com → example.com: one address, so an installed app keeps a single offline store.
+	@www header_regexp www Host ^www\.(.+)$
+	redir @www https://{re.www.1}{uri} permanent
+
 	encode zstd gzip
 
 	# Laravel API (and the /up health check).
