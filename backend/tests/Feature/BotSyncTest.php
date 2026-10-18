@@ -29,6 +29,10 @@ class BotSyncTest extends TestCase
     private array $pendingUpdates = [];
     private int $rateLimitOnce = 0;
     private string $webhook = '';
+    private string $chatType = 'channel';
+    private string $memberStatus = 'administrator';
+    /** The bot's privacy mode is off (BotFather /setprivacy → Disable). */
+    private bool $readsAllGroupMessages = false;
 
     protected function setUp(): void
     {
@@ -64,9 +68,9 @@ class BotSyncTest extends TestCase
             $fail = fn (int $code, string $text, array $extra = []) => Http::response(['ok' => false, 'error_code' => $code, 'description' => $text, ...$extra], $code);
 
             return match ($method) {
-                'getMe' => $ok(['id' => 42, 'is_bot' => true, 'first_name' => 'Solix', 'username' => 'solix_bot']),
-                'getChat' => $ok(['id' => self::CHANNEL, 'type' => 'channel', 'title' => 'Solix Music', 'username' => 'solix_music']),
-                'getChatMember' => $ok(['status' => 'administrator', 'user' => ['id' => 42]]),
+                'getMe' => $ok(['id' => 42, 'is_bot' => true, 'first_name' => 'Solix', 'username' => 'solix_bot', 'can_read_all_group_messages' => $this->readsAllGroupMessages]),
+                'getChat' => $ok(['id' => self::CHANNEL, 'type' => $this->chatType, 'title' => 'Solix Music', 'username' => 'solix_music']),
+                'getChatMember' => $ok(['status' => $this->memberStatus, 'user' => ['id' => 42]]),
                 'getUpdates' => $ok(array_splice($this->pendingUpdates, 0)),
                 'deleteMessage', 'sendMessage', 'deleteWebhook' => $ok(true),
                 'getWebhookInfo' => $ok(['url' => $this->webhook, 'pending_update_count' => 0]),
@@ -172,6 +176,68 @@ class BotSyncTest extends TestCase
         $this->assertSame(12, Setting::get('telegram.update_offset'));
         $this->assertSame([self::CHANNEL => 90], $highest);
         $this->assertSame('New Song', Track::query()->where('message_id', 90)->value('title'));
+    }
+
+    public function test_a_group_can_be_added_when_the_bot_sees_its_messages(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->chatType = 'supergroup';
+        $this->memberStatus = 'member';
+
+        // Privacy mode on and not an admin: the bot would only see commands.
+        $this->actingAs($admin)->postJson('/api/admin/channels', ['peer' => '@solix_music'])
+            ->assertUnprocessable()->assertJsonPath('errors.peer.0', fn ($m) => str_contains($m, '/setprivacy'));
+
+        $this->readsAllGroupMessages = true;
+        $this->actingAs($admin)->postJson('/api/admin/channels', ['peer' => '@solix_music'])
+            ->assertCreated()->assertJsonPath('data.kind', 'supergroup');
+    }
+
+    public function test_a_channel_still_needs_the_bot_as_admin(): void
+    {
+        $this->memberStatus = 'member';
+        $this->readsAllGroupMessages = true;
+
+        $this->actingAs(User::factory()->admin()->create())->postJson('/api/admin/channels', ['peer' => '@solix_music'])
+            ->assertUnprocessable()->assertJsonPath('errors.peer.0', 'The bot must be an admin of the channel.');
+    }
+
+    public function test_group_messages_become_tracks_and_groups_are_remembered(): void
+    {
+        $group = $this->channel();
+        $group->update(['telegram_id' => self::CHANNEL, 'kind' => 'supergroup']);
+
+        $this->pendingUpdates = [
+            ['update_id' => 20, 'my_chat_member' => [
+                'chat' => ['id' => -1009, 'type' => 'supergroup', 'title' => 'Private Group'],
+                'new_chat_member' => ['status' => 'member', 'user' => ['id' => 42]],
+            ]],
+            ['update_id' => 21, 'message' => ['message_id' => 7, 'chat' => ['id' => self::CHANNEL, 'type' => 'supergroup', 'title' => 'Solix Music'], 'date' => 1700000000, ...$this->audio('g', 'Group Song', 'Shayea')]],
+            ['update_id' => 22, 'message' => ['message_id' => 8, 'chat' => ['id' => self::CHANNEL, 'type' => 'supergroup'], 'text' => 'nice one']],
+        ];
+        app(BotUpdates::class)->poll();
+
+        $this->assertSame('Group Song', Track::query()->where('channel_id', $group->id)->where('message_id', 7)->value('title'));
+        $this->assertSame(1, Track::query()->where('channel_id', $group->id)->count());
+
+        $listed = $this->actingAs(User::factory()->admin()->create())->getJson('/api/admin/telegram/dialogs')->assertOk()->json('data');
+        $this->assertContains('Private Group', array_column($listed, 'title'));
+        $this->assertFalse(collect($listed)->firstWhere('title', 'Private Group')['broadcast']);
+    }
+
+    public function test_a_basic_group_that_becomes_a_supergroup_keeps_syncing(): void
+    {
+        $group = $this->channel();
+        $group->update(['telegram_id' => -555, 'kind' => 'group', 'last_message_id' => 300]);
+
+        $this->pendingUpdates = [
+            ['update_id' => 30, 'message' => ['message_id' => 301, 'chat' => ['id' => -555, 'type' => 'group', 'title' => 'G'], 'migrate_to_chat_id' => -1005550]],
+        ];
+        app(BotUpdates::class)->poll();
+
+        $this->assertSame(-1005550, (int) $group->fresh()->telegram_id);
+        $this->assertSame('supergroup', $group->fresh()->kind);
+        $this->assertSame(0, (int) $group->fresh()->last_message_id);
     }
 
     public function test_rate_limits_are_retried(): void

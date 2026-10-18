@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Channel extends Model
 {
     protected $fillable = [
-        'peer', 'telegram_id', 'title', 'username', 'enabled',
+        'peer', 'telegram_id', 'title', 'username', 'kind', 'enabled',
         'last_message_id', 'sync_status', 'sync_error', 'sync_progress', 'skipped_count', 'last_synced_at',
     ];
 

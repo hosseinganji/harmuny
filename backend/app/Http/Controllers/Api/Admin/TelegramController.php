@@ -159,6 +159,21 @@ class TelegramController extends Controller
 
     public function dialogs(): JsonResponse
     {
+        if (TelegramMode::isBot()) {
+            // A bot cannot list its chats; it remembers the ones it was added to (see BotUpdates).
+            try {
+                app(BotUpdates::class)->poll();
+            } catch (\Throwable) {
+                // Show what is already known.
+            }
+            $chats = collect(Setting::get(BotUpdates::CHATS_KEY, []))
+                ->map(fn (array $c) => ['id' => $c['id'], 'title' => $c['title'], 'username' => $c['username'], 'broadcast' => $c['type'] === 'channel'])
+                ->sortBy('title')
+                ->values();
+
+            return response()->json(['data' => $chats]);
+        }
+
         return response()->json(['data' => $this->telegram->listChannels()]);
     }
 

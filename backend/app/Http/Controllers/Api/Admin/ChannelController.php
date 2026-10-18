@@ -28,7 +28,7 @@ class ChannelController extends Controller
             if (TelegramMode::isBot()) {
                 $syncer = app(BotChannelSyncer::class);
                 $info = $syncer->resolve($peer);
-                $syncer->assertAdmin($info['id']);
+                $syncer->assertAccess($info['id'], $info['type']);
             } else {
                 $info = $telegram->resolveChannel(is_numeric($peer) ? (int) $peer : $peer);
             }
@@ -40,6 +40,7 @@ class ChannelController extends Controller
             'peer' => (string) $peer,
             'title' => $info['title'],
             'username' => $info['username'],
+            'kind' => $info['type'] ?? (($info['broadcast'] ?? true) ? 'channel' : 'supergroup'),
             'enabled' => true,
         ]);
         SyncChannelJob::dispatch($channel, true);
