@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ChevronRight, Download, HardDrive, Heart, RefreshCw } from 'lucide-vue-next'
+import { ChevronRight, Download, HardDrive, Heart, Play, RefreshCw, Sparkles } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import ArtistCard from '@/components/ArtistCard.vue'
 import PlaylistCard from '@/components/PlaylistCard.vue'
 import Shelf from '@/components/Shelf.vue'
 import TrackCard from '@/components/TrackCard.vue'
+import TrackCover from '@/components/TrackCover.vue'
 import { cachedGet } from '@/lib/cached'
 import { count } from '@/lib/format'
 import { t } from '@/lib/i18n'
+import { playDailyMix } from '@/lib/radio'
 import type { ApiTrack, Playlist, RemoteTrack } from '@/lib/types'
 import { useAuth } from '@/stores/auth'
 import { useDownloads } from '@/stores/downloads'
@@ -57,7 +59,14 @@ const quick = computed(() => [
   { to: '/library/downloads', icon: Download, label: t('library.downloads'), n: downloads.count, color: 'from-emerald-600 to-teal-500' },
 ])
 
+// Today's mix, made from this member's taste (kept for offline use like the rest of Home).
+const mix = ref<ApiTrack[]>([])
+const mixCovers = computed(() => library.remember(mix.value.filter((x) => x.has_cover).slice(0, 4)))
+
 async function load() {
+  cachedGet<{ data: ApiTrack[] }>('/mixes/daily', undefined, (c) => (mix.value = c.data))
+    .then((res) => (mix.value = res.data))
+    .catch(() => {})
   try {
     home.value = await cachedGet<HomeData>('/home', undefined, (c) => (home.value ??= c))
   } catch {
@@ -105,6 +114,23 @@ onMounted(load)
         <span class="min-w-0 truncate text-sm font-bold">{{ q.label }}</span>
         <span v-if="q.n" class="ms-auto me-3 text-xs text-subtle">{{ count(q.n) }}</span>
       </RouterLink>
+
+      <!-- Daily mix: made from this member's taste, new every day. -->
+      <button
+        v-if="mix.length"
+        class="group col-span-2 flex items-center gap-4 overflow-hidden rounded-2xl bg-fg/[0.06] p-3 text-start transition hover:bg-fg/10 active:scale-[0.98]"
+        @click="playDailyMix(mix)"
+      >
+        <span class="grid size-16 shrink-0 grid-cols-2 overflow-hidden rounded-xl shadow-lg">
+          <TrackCover v-for="tr in mixCovers" :key="tr.id" :track="tr" size="fill" rounded="rounded-none" />
+        </span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-accent"><Sparkles class="size-3.5" />{{ t('mix.kicker') }}</span>
+          <span class="block truncate text-lg font-black">{{ t('mix.daily') }}</span>
+          <span class="block truncate text-xs text-muted">{{ t('mix.dailyHint', { n: mix.length }) }}</span>
+        </span>
+        <span class="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-lg transition group-active:scale-90"><Play class="size-5 translate-x-px fill-current" /></span>
+      </button>
     </div>
   </div>
 

@@ -14,7 +14,7 @@ export interface QueueItem {
 }
 
 export interface PlayContext {
-  type: 'playlist' | 'artist' | 'liked' | 'downloads' | 'local' | 'search' | 'library' | 'home' | 'history'
+  type: 'playlist' | 'artist' | 'liked' | 'downloads' | 'local' | 'search' | 'library' | 'home' | 'history' | 'radio' | 'mix'
   id?: string | number
   name?: string
 }
@@ -237,11 +237,12 @@ export const usePlayer = defineStore('player', () => {
     useUi().toast(items.length > 1 ? t('toast.playNextMany', { n: items.length }) : t('toast.playNext', { title: items[0].track.title }), 'success')
   }
 
-  function addToQueue(tracks: Track | Track[]) {
+  function addToQueue(tracks: Track | Track[], options: { silent?: boolean } = {}) {
     const items = (Array.isArray(tracks) ? tracks : [tracks]).map(wrap)
     if (!current.value) return playTracks(items.map((i) => i.track))
     queue.value = [...queue.value, ...items]
     if (originalOrder.value) originalOrder.value = [...originalOrder.value, ...items.map((i) => i.uid)]
+    if (options.silent) return
     useUi().toast(items.length > 1 ? t('toast.queuedMany', { n: items.length }) : t('toast.queued', { title: items[0].track.title }), 'success')
   }
 

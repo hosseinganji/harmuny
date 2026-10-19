@@ -184,6 +184,12 @@ export default {
   'collab.leave': 'خروج از این پلی‌لیست',
   'collab.leaveConfirm': 'از «{name}» خارج شوی؟ دیگر نمی‌توانی به آن آهنگ اضافه کنی.',
   'collab.addedBy': 'اضافه‌شده توسط {name}',
+  'radio.start': 'شروع رادیو',
+  'radio.artist': 'رادیو',
+  'radio.of': 'رادیوی {name}',
+  'mix.kicker': 'مخصوص تو',
+  'mix.daily': 'میکس روزانه‌ی تو',
+  'mix.dailyHint': '{n} آهنگ بر اساس سلیقه‌ات · هر روز تازه',
   'collection.downloaded': '{n} از {total} دانلود شده',
 
   'downloads.storage': '{size} دانلود شده',

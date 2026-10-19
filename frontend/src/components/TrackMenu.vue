@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { onClickOutside, onKeyStroke, useMediaQuery } from '@vueuse/core'
 import {
-  CircleMinus, Download, EyeOff, Heart, ListEnd, ListMinus, ListPlus, ListStart, PencilLine, Share2, Trash2, UserRound,
+  CircleMinus, Download, EyeOff, Heart, Radio, ListEnd, ListMinus, ListPlus, ListStart, PencilLine, Share2, Trash2, UserRound,
 } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/lib/api'
 import { t } from '@/lib/i18n'
+import { startRadio } from '@/lib/radio'
 import type { Track } from '@/lib/types'
 import { useAuth } from '@/stores/auth'
 import { useDownloads } from '@/stores/downloads'
@@ -117,6 +118,7 @@ async function hide(track: Track) {
             <button v-if="!allDownloaded" @click="run(() => downloads.download(remote))"><Download />{{ t('menu.download') }}</button>
             <button v-else @click="run(() => downloads.remove(remote))"><Trash2 />{{ t('menu.removeDownload') }}</button>
           </template>
+          <button v-if="single?.kind === 'remote'" @click="run(() => startRadio({ trackId: single!.id as number, name: single!.title }))"><Radio />{{ t('radio.start') }}</button>
           <button v-if="single?.kind === 'remote' && single.artist" @click="run(() => router.push({ name: 'artist', query: { name: single!.artist! } }))">
             <UserRound />{{ t('menu.goToArtist') }}
           </button>

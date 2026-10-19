@@ -44,12 +44,14 @@ export function setUnauthorizedHandler(handler: () => void) {
   onUnauthorized = handler
 }
 
-type Query = Record<string, string | number | boolean | null | undefined>
+type Query = Record<string, string | number | boolean | null | undefined | (string | number)[]>
 
 function buildUrl(path: string, query?: Query) {
   const url = new URL(apiBase() + '/api' + path, location.origin)
   for (const [k, v] of Object.entries(query ?? {})) {
-    if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v))
+    // Lists go as key[]=a&key[]=b, which Laravel reads as an array.
+    if (Array.isArray(v)) v.forEach((item) => url.searchParams.append(`${k}[]`, String(item)))
+    else if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v))
   }
   return url.toString()
 }
