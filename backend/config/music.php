@@ -24,8 +24,11 @@ return [
     // Bot API mode: sync through a bot that is an admin of the channel (no my.telegram.org keys needed).
     'bot' => [
         'api_url' => env('TELEGRAM_BOT_API_URL', 'https://api.telegram.org'),
-        // The public Bot API refuses downloads above 20 MB.
-        'max_file_bytes' => 20 * 1024 * 1024,
+        // The public Bot API refuses downloads above 20 MB; a local Bot API server (docker compose
+        // profile "bigfiles") allows up to 2000 MB.
+        'max_file_bytes' => (int) env('TELEGRAM_BOT_MAX_FILE_MB', 20) * 1024 * 1024,
+        // True when api_url is our own Bot API server running with --local (files arrive on its disk).
+        'local_server' => (bool) env('TELEGRAM_BOT_API_LOCAL', false),
         // How many missing message ids in a row end a history scan.
         'scan_gap' => (int) env('TELEGRAM_SCAN_GAP', 60),
     ],

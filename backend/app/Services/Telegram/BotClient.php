@@ -107,7 +107,7 @@ class BotClient
         return $url;
     }
 
-    /** Absolute download URL of a file (valid for at least an hour). Throws for files over 20 MB. */
+    /** Absolute download URL of a file (valid for at least an hour). Throws for files over the limit. */
     public function fileUrl(string $fileId): string
     {
         $file = $this->call('getFile', ['file_id' => $fileId]);
@@ -115,9 +115,26 @@ class BotClient
         return rtrim(config('music.bot.api_url'), '/').'/file/bot'.$this->token().'/'.$file['file_path'];
     }
 
+    /**
+     * A local Bot API server (--local) saves the file on its disk and returns that absolute path, which
+     * this app sees through the shared volume. Null for the public Bot API.
+     */
+    private function localPath(string $fileId): ?string
+    {
+        $path = $this->call('getFile', ['file_id' => $fileId], timeout: 600)['file_path'] ?? '';
+
+        return str_starts_with($path, '/') && is_file($path) ? $path : null;
+    }
+
     public function download(string $fileId, string $path): void
     {
         File::ensureDirectoryExists(dirname($path));
+        if (config('music.bot.local_server') && ($local = $this->localPath($fileId))) {
+            File::copy($local, $path);
+            File::delete($local); // the library keeps its own copy; don't store the song twice
+
+            return;
+        }
         try {
             $response = $this->http(600)->sink($path)->get($this->fileUrl($fileId));
         } catch (ConnectionException $e) {
@@ -131,6 +148,12 @@ class BotClient
 
     public function fileBytes(string $fileId): string
     {
+        if (config('music.bot.local_server') && ($local = $this->localPath($fileId))) {
+            $bytes = (string) file_get_contents($local);
+            File::delete($local);
+
+            return $bytes;
+        }
         try {
             $response = $this->http(60)->get($this->fileUrl($fileId));
         } catch (ConnectionException $e) {
