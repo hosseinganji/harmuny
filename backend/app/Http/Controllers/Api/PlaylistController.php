@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PlaylistResource;
 use App\Models\Playlist;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -38,9 +39,10 @@ class PlaylistController extends Controller
     {
         $user = $request->user();
         $playlists = Playlist::query()
-            ->with('user')
+            ->with(['user', 'collaborators'])
             ->withCount('tracks')
             ->where(fn ($q) => $q->where('user_id', $user->id)
+                ->orWhereHas('collaborators', fn ($c) => $c->whereKey($user->id))
                 ->when($request->boolean('include_public'), fn ($q) => $q->orWhere('is_public', true)))
             ->orderByRaw('user_id = ? desc', [$user->id])
             ->latest('updated_at')
@@ -61,15 +63,21 @@ class PlaylistController extends Controller
         ]);
 
         $playlist = $request->user()->playlists()->create($data);
-        $this->appendTracks($playlist, $data['track_ids'] ?? [], false);
+        $this->appendTracks($playlist, $data['track_ids'] ?? [], false, $request->user()->id);
 
         return $this->show($request, $playlist);
     }
 
     public function show(Request $request, Playlist $playlist): PlaylistResource
     {
+        $playlist->load(['user', 'collaborators']);
         abort_unless($playlist->isVisibleTo($request->user()), 404);
-        $playlist->load(['user', 'tracks']);
+        $playlist->load('tracks');
+        // Who added each song, shown in shared playlists only.
+        if ($playlist->collaborators->isNotEmpty()) {
+            $adders = User::query()->whereIn('id', $playlist->tracks->pluck('pivot.added_by')->filter()->unique())->get()->keyBy('id');
+            $playlist->tracks->each(fn ($track) => $track->setAttribute('added_by_user', $adders->get($track->pivot->added_by)));
+        }
         self::attachPreviews(collect([$playlist]));
 
         return new PlaylistResource($playlist);
@@ -100,20 +108,20 @@ class PlaylistController extends Controller
 
     public function addTracks(Request $request, Playlist $playlist): PlaylistResource
     {
-        $this->authorizeOwner($request, $playlist);
+        $this->authorizeEditor($request, $playlist);
         $data = $request->validate([
             'track_ids' => ['required', 'array', 'max:1000'],
             'track_ids.*' => ['integer', 'exists:tracks,id'],
             'allow_duplicates' => ['boolean'],
         ]);
-        $this->appendTracks($playlist, $data['track_ids'], ! ($data['allow_duplicates'] ?? false));
+        $this->appendTracks($playlist, $data['track_ids'], ! ($data['allow_duplicates'] ?? false), $request->user()->id);
 
         return $this->show($request, $playlist);
     }
 
     public function removeTrack(Request $request, Playlist $playlist, int $entry): PlaylistResource
     {
-        $this->authorizeOwner($request, $playlist);
+        $this->authorizeEditor($request, $playlist);
         DB::table('playlist_track')->where('playlist_id', $playlist->id)->where('id', $entry)->delete();
         $playlist->touch();
 
@@ -122,7 +130,7 @@ class PlaylistController extends Controller
 
     public function reorder(Request $request, Playlist $playlist): PlaylistResource
     {
-        $this->authorizeOwner($request, $playlist);
+        $this->authorizeEditor($request, $playlist);
         $ids = $request->validate([
             'entry_ids' => ['required', 'array'],
             'entry_ids.*' => ['integer'],
@@ -173,7 +181,7 @@ class PlaylistController extends Controller
         return response()->file(Storage::path($playlist->cover_path), ['Cache-Control' => 'private, max-age=604800']);
     }
 
-    private function appendTracks(Playlist $playlist, array $trackIds, bool $skipExisting): void
+    private function appendTracks(Playlist $playlist, array $trackIds, bool $skipExisting, ?int $addedBy = null): void
     {
         if ($skipExisting) {
             $existing = DB::table('playlist_track')->where('playlist_id', $playlist->id)->pluck('track_id')->all();
@@ -183,7 +191,7 @@ class PlaylistController extends Controller
         $now = now();
         $rows = [];
         foreach ($trackIds as $trackId) {
-            $rows[] = ['playlist_id' => $playlist->id, 'track_id' => $trackId, 'position' => ++$position, 'created_at' => $now];
+            $rows[] = ['playlist_id' => $playlist->id, 'track_id' => $trackId, 'position' => ++$position, 'added_by' => $addedBy, 'created_at' => $now];
         }
         if ($rows) {
             DB::table('playlist_track')->insert($rows);
@@ -194,5 +202,47 @@ class PlaylistController extends Controller
     private function authorizeOwner(Request $request, Playlist $playlist): void
     {
         abort_unless($playlist->user_id === $request->user()->id, 403);
+    }
+
+    private function authorizeEditor(Request $request, Playlist $playlist): void
+    {
+        abort_unless($playlist->canEditTracks($request->user()), 403);
+    }
+
+    /** The owner sets who may add songs (a shared playlist); an empty list makes it personal again. */
+    public function setCollaborators(Request $request, Playlist $playlist): PlaylistResource
+    {
+        $this->authorizeOwner($request, $playlist);
+        $ids = $request->validate([
+            'user_ids' => ['present', 'array', 'max:100'],
+            'user_ids.*' => ['integer', 'exists:users,id'],
+        ])['user_ids'];
+        $ids = array_values(array_diff(array_unique($ids), [$playlist->user_id]));
+        $playlist->collaborators()->sync(array_fill_keys($ids, ['created_at' => now()]));
+        $playlist->touch();
+
+        return $this->show($request, $playlist);
+    }
+
+    /** A collaborator leaves a shared playlist. */
+    public function leave(Request $request, Playlist $playlist): JsonResponse
+    {
+        $playlist->collaborators()->detach($request->user()->id);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** Active members, to invite to a shared playlist. */
+    public function members(Request $request): JsonResponse
+    {
+        $users = User::query()
+            ->where('status', User::STATUS_ACTIVE)
+            ->whereKeyNot($request->user()->id)
+            ->orderBy('name')
+            ->get();
+
+        return response()->json(['data' => $users->map(fn (User $u) => [
+            'id' => $u->id, 'name' => $u->name, 'username' => $u->username, 'avatar_url' => $u->avatarUrl(),
+        ])]);
     }
 }

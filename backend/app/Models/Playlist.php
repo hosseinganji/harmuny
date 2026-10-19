@@ -23,13 +23,32 @@ class Playlist extends Model
     public function tracks(): BelongsToMany
     {
         return $this->belongsToMany(Track::class)
-            ->withPivot(['id', 'position', 'created_at'])
+            ->withPivot(['id', 'position', 'added_by', 'created_at'])
             ->orderByPivot('position');
+    }
+
+    /** Members the owner invited to add, remove and reorder songs. */
+    public function collaborators(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'playlist_collaborators')->withPivot('created_at');
+    }
+
+    public function isCollaborator(User $user): bool
+    {
+        return $this->relationLoaded('collaborators')
+            ? $this->collaborators->contains('id', $user->id)
+            : $this->collaborators()->whereKey($user->id)->exists();
+    }
+
+    /** Owner or collaborator: may change which songs are in it and their order. */
+    public function canEditTracks(User $user): bool
+    {
+        return $this->user_id === $user->id || $this->isCollaborator($user);
     }
 
     public function isVisibleTo(User $user): bool
     {
-        return $this->user_id === $user->id || $this->is_public;
+        return $this->user_id === $user->id || $this->is_public || $this->isCollaborator($user);
     }
 
     public function coverUrl(): ?string

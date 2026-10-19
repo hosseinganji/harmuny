@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { ArrowUpDown, Check, GripVertical, ImageMinus, ImageUp, ListMusic, Lock, MoreHorizontal, Pencil, Trash2, UsersRound } from 'lucide-vue-next'
+import { ArrowUpDown, Check, GripVertical, ImageMinus, ImageUp, ListMusic, Lock, LogOut, MoreHorizontal, Pencil, Trash2, UserPlus, UsersRound } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Draggable from 'vuedraggable'
 import CollectionActions from '@/components/CollectionActions.vue'
 import CollectionHeader from '@/components/CollectionHeader.vue'
+import Avatar from '@/components/Avatar.vue'
+import CollaboratorsDialog from '@/components/CollaboratorsDialog.vue'
 import CoverMosaic from '@/components/CoverMosaic.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import Modal from '@/components/Modal.vue'
 import TrackCover from '@/components/TrackCover.vue'
 import SortSelect from '@/components/SortSelect.vue'
 import TrackList from '@/components/TrackList.vue'
-import { ApiError, coverUrl, withMediaKey } from '@/lib/api'
+import { api, ApiError, coverUrl, withMediaKey } from '@/lib/api'
 import { usePageColor } from '@/lib/dynamicColor'
 import { duration, longDuration } from '@/lib/format'
 import { t } from '@/lib/i18n'
@@ -30,6 +32,9 @@ const playlist = ref<Playlist | null>(null)
 const error = ref(false)
 const editing = ref(false)
 const reordering = ref(false)
+const sharing = ref(false)
+/** Owner, or a member invited to this shared playlist. */
+const canEdit = computed(() => !!playlist.value && (playlist.value.can_edit ?? playlist.value.is_owner))
 const form = ref({ name: '', description: '', is_public: false })
 const busy = ref(false)
 
@@ -89,6 +94,13 @@ async function removeCover() {
   playlist.value = await playlists.deleteCover(props.id)
 }
 
+async function leave() {
+  if (!confirm(t('collab.leaveConfirm', { name: playlist.value?.name ?? '' }))) return
+  await api.delete(`/playlists/${props.id}/collaborators/me`)
+  playlists.load()
+  router.replace('/library')
+}
+
 async function destroy() {
   if (!confirm(t('playlist.deleteConfirm', { name: playlist.value?.name ?? '' }))) return
   await playlists.remove(props.id)
@@ -118,7 +130,7 @@ async function finishReorder() {
   <div v-else-if="!playlist" class="p-6"><div class="skeleton size-56 rounded-2xl" /></div>
   <template v-else>
     <CollectionHeader
-      :kicker="playlist.is_public ? t('playlist.publicPlaylist') : t('playlist.privatePlaylist')"
+      :kicker="playlist.is_collaborative ? t('collab.kicker') : playlist.is_public ? t('playlist.publicPlaylist') : t('playlist.privatePlaylist')"
       :title="playlist.name"
       :description="playlist.description"
     >
@@ -129,6 +141,14 @@ async function finishReorder() {
             <UsersRound v-if="playlist.is_public" class="size-4" /><Lock v-else class="size-4" />
             {{ playlist.owner.name }}
           </span>
+          <!-- Shared playlists show who adds songs -->
+          <span v-if="playlist.is_collaborative" class="flex items-center gap-1.5">
+            <span>·</span>
+            <span class="flex -space-x-2 rtl:space-x-reverse">
+              <Avatar v-for="c in playlist.collaborators!.slice(0, 4)" :key="c.id" :name="c.name" :src="c.avatar_url" size="size-6 text-[9px] ring-2 ring-bg" />
+            </span>
+            <span v-if="playlist.collaborators!.length > 4" class="text-xs">+{{ playlist.collaborators!.length - 4 }}</span>
+          </span>
           <span>·</span><span>{{ t('playlist.songs', { n: tracks.length }) }}</span>
           <template v-if="total"><span>·</span><span>{{ longDuration(total) }}</span></template>
         </div>
@@ -136,11 +156,15 @@ async function finishReorder() {
     </CollectionHeader>
 
     <CollectionActions :tracks="sorted" :context="context">
-      <template v-if="playlist.is_owner">
+      <template v-if="canEdit">
         <button v-if="reordering" class="btn-primary h-9 px-4" @click="finishReorder"><Check class="size-4" />{{ t('common.done') }}</button>
         <button v-else-if="tracks.length > 1" class="icon-btn" :title="t('playlist.reorder')" @click="startReorder"><ArrowUpDown class="size-5" /></button>
+      </template>
+      <template v-if="playlist.is_owner">
+        <button class="icon-btn" :class="{ '!text-accent': playlist.is_collaborative }" :title="t('collab.title')" @click="sharing = true"><UserPlus class="size-5" /></button>
         <button class="icon-btn" :title="t('common.edit')" @click="openEdit"><Pencil class="size-5" /></button>
       </template>
+      <button v-else-if="canEdit" class="icon-btn" :title="t('collab.leave')" @click="leave"><LogOut class="size-5 rtl:rotate-180" /></button>
       <button v-if="tracks.length" class="icon-btn" :title="t('track.more')" @click="ui.openTrackMenu(tracks, $event)"><MoreHorizontal class="size-5" /></button>
     </CollectionActions>
 
@@ -170,10 +194,12 @@ async function finishReorder() {
         numbered
         show-album
         :context="context"
-        :menu-context="(tr) => ({ playlistId: id, entryId: (tr as RemoteTrack).entry_id, canRemoveFromPlaylist: playlist!.is_owner })"
+        :menu-context="(tr) => ({ playlistId: id, entryId: (tr as RemoteTrack).entry_id, canRemoveFromPlaylist: canEdit })"
       />
     </div>
   </template>
+
+  <CollaboratorsDialog v-if="playlist" :open="sharing" :playlist="playlist" @close="sharing = false" @saved="load" />
 
   <Modal :open="editing" :title="t('playlist.edit')" @close="editing = false">
     <form v-if="playlist" class="space-y-4" @submit.prevent="save">

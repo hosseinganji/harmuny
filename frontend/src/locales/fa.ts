@@ -8,6 +8,7 @@ export default {
   'nav.profile': 'پروفایل',
   'nav.admin': 'مدیریت',
   'online.title': 'آنلاین‌ها',
+  'online.listening': 'در حال گوش دادن',
   'online.you': 'خودت',
 
   'common.cancel': 'انصراف',
@@ -176,6 +177,13 @@ export default {
   'playlist.deleteConfirm': '«{name}» حذف شود؟',
   'playlist.notFound': 'پلی‌لیست پیدا نشد',
 
+  'collab.title': 'افزودن هم‌پلی‌لیستی',
+  'collab.hint': 'اعضایی که انتخاب می‌کنی می‌توانند به این پلی‌لیست آهنگ اضافه یا حذف کنند و ترتیبش را عوض کنند. فقط خودت می‌توانی اسمش را عوض یا حذفش کنی.',
+  'collab.noMembers': 'هنوز عضو دیگری نیست.',
+  'collab.kicker': 'پلی‌لیست مشترک',
+  'collab.leave': 'خروج از این پلی‌لیست',
+  'collab.leaveConfirm': 'از «{name}» خارج شوی؟ دیگر نمی‌توانی به آن آهنگ اضافه کنی.',
+  'collab.addedBy': 'اضافه‌شده توسط {name}',
   'collection.downloaded': '{n} از {total} دانلود شده',
 
   'downloads.storage': '{size} دانلود شده',

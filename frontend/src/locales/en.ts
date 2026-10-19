@@ -8,6 +8,7 @@ export default {
   'nav.profile': 'Profile',
   'nav.admin': 'Admin',
   'online.title': 'Online now',
+  'online.listening': 'Listening to',
   'online.you': 'You',
 
   'common.cancel': 'Cancel',
@@ -176,6 +177,13 @@ export default {
   'playlist.deleteConfirm': 'Delete “{name}”?',
   'playlist.notFound': 'Playlist not found',
 
+  'collab.title': 'Add collaborators',
+  'collab.hint': 'Members you pick can add, remove and reorder songs in this playlist. Only you can rename or delete it.',
+  'collab.noMembers': 'There are no other members yet.',
+  'collab.kicker': 'Shared playlist',
+  'collab.leave': 'Leave this playlist',
+  'collab.leaveConfirm': 'Leave “{name}”? You will no longer be able to add songs to it.',
+  'collab.addedBy': 'Added by {name}',
   'collection.downloaded': '{n} of {total} downloaded',
 
   'downloads.storage': '{size} downloaded',

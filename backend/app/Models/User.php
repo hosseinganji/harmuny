@@ -45,6 +45,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'approved_at' => 'datetime',
             'last_seen_at' => 'datetime',
+            'now_playing_at' => 'datetime',
             'password' => 'hashed',
             'preferences' => 'array',
         ];
@@ -90,5 +91,11 @@ class User extends Authenticatable
     public function plays(): HasMany
     {
         return $this->hasMany(Play::class);
+    }
+
+    /** The song this member reported playing last (see OnlineController::presence). */
+    public function nowPlaying(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Track::class, 'now_playing_track_id');
     }
 }

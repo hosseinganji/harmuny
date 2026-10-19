@@ -48,6 +48,9 @@ class TrackResource extends JsonResource
             'updated_at' => $this->updated_at?->toIso8601String(),
             'liked' => $user ? isset(self::likedIds($user->id)[$this->id]) : false,
             'entry_id' => $this->whenPivotLoaded('playlist_track', fn () => $this->pivot->id),
+            'added_by' => $this->when($this->added_by_user !== null, fn () => [
+                'id' => $this->added_by_user->id, 'name' => $this->added_by_user->name, 'avatar_url' => $this->added_by_user->avatarUrl(),
+            ]),
             'deleted' => $this->when($this->trashed(), true),
         ];
     }

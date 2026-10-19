@@ -16,6 +16,8 @@ export interface ApiTrack {
   updated_at: string | null
   liked?: boolean
   entry_id?: number
+  /** Who added it, in a shared playlist. */
+  added_by?: { id: number; name: string; avatar_url: string | null }
 }
 
 export interface RemoteTrack extends ApiTrack {
@@ -84,12 +86,23 @@ export interface Playlist {
   cover_url: string | null
   owner: { id: number; name?: string; username?: string }
   is_owner: boolean
+  /** Shared playlists: members who may add songs, and whether the viewer may. */
+  collaborators?: Member[]
+  is_collaborative?: boolean
+  can_edit?: boolean
   tracks_count?: number
   duration?: number
   preview_track_ids: number[]
   tracks?: ApiTrack[]
   created_at: string
   updated_at: string
+}
+
+export interface Member {
+  id: number
+  name: string
+  username: string
+  avatar_url: string | null
 }
 
 export interface ArtistSummary {
