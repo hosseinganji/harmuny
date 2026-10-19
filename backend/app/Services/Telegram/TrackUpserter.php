@@ -4,6 +4,7 @@ namespace App\Services\Telegram;
 
 use App\Models\Channel;
 use App\Jobs\FetchCoverJob;
+use App\Jobs\NotifyNewTracksJob;
 use App\Models\Track;
 use App\Services\CoverService;
 
@@ -39,6 +40,11 @@ class TrackUpserter
 
         if ($track->has_cover && ! app(CoverService::class)->cached($track)) {
             FetchCoverJob::dispatch($track);
+        }
+
+        // A song just posted (not an old one found while reading a channel's history): tell members.
+        if ($track->wasRecentlyCreated && $track->posted_at?->gte(now()->subHours(2))) {
+            NotifyNewTracksJob::collect($track);
         }
 
         return $track;

@@ -190,6 +190,13 @@ export default {
   'mix.kicker': 'Made for you',
   'mix.daily': 'Your daily mix',
   'mix.dailyHint': '{n} songs from your taste · new every day',
+  'push.title': 'Notifications',
+  'push.newSongs': 'New songs',
+  'push.newSongsHint': 'Get a notification when new songs are added.',
+  'push.installFirst': 'On iPhone, notifications work in the installed app: in Safari tap Share → Add to Home Screen, then open Harmony from the home screen and turn this on.',
+  'push.denied': 'Notifications are blocked for this app. Allow them in your phone or browser settings, then come back.',
+  'push.unsupported': 'This browser can\'t show notifications.',
+  'push.failed': 'Couldn\'t turn notifications on.',
   'collection.downloaded': '{n} of {total} downloaded',
 
   'downloads.storage': '{size} downloaded',

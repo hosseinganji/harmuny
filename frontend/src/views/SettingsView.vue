@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronRight, Download, HardDrive, Info, Languages, Palette, SlidersHorizontal } from 'lucide-vue-next'
+import { Bell, ChevronRight, Download, HardDrive, Info, Languages, Palette, SlidersHorizontal } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { LOCALES, t } from '@/lib/i18n'
 import { useEqualizer } from '@/stores/equalizer'
@@ -33,6 +33,7 @@ const groups = computed(() => [
     badge: LOCALES.find((l) => l.value === settings.prefs.language)?.label,
   },
   { to: '/settings/playback', icon: Download, title: t('settings.playback'), hint: t('settings.playbackHint') },
+  { to: '/settings/notifications', icon: Bell, title: t('push.title'), hint: t('push.newSongsHint') },
   { to: '/settings/storage', icon: HardDrive, title: t('settings.storage'), hint: t('settings.storageHint') },
   { to: '/settings/about', icon: Info, title: t('settings.about'), hint: t('settings.aboutHint') },
 ])

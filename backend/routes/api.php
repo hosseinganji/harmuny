@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\OnlineController;
 use App\Http\Controllers\Api\PlaylistController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\PushController;
 use App\Http\Controllers\Api\RadioController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\TrackController;
@@ -45,6 +46,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('me/stats', [ProfileController::class, 'stats']);
     Route::get('online', OnlineController::class);
     Route::post('presence', [OnlineController::class, 'presence']);
+    Route::get('push/key', [PushController::class, 'key']);
+    Route::post('push/subscriptions', [PushController::class, 'subscribe']);
+    Route::delete('push/subscriptions', [PushController::class, 'unsubscribe']);
 
     Route::get('home', [TrackController::class, 'home']);
     Route::get('library/sync', [TrackController::class, 'sync']);
