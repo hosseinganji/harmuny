@@ -16,7 +16,7 @@ const dir = computed(() => (isRtl.value ? -1 : 1))
 </script>
 
 <template>
-  <nav class="liquid relative mx-auto flex max-w-md rounded-full p-1 lg:hidden">
+  <nav class="vt-tabbar liquid relative mx-auto flex max-w-md rounded-full p-1 lg:hidden">
     <!-- One bubble glides to the selected tab instead of each tab lighting up on its own. -->
     <span
       v-if="activeIndex >= 0"
@@ -30,7 +30,7 @@ const dir = computed(() => (isRtl.value ? -1 : 1))
       class="relative flex flex-1 flex-col items-center gap-0.5 rounded-full pb-1.5 pt-2 text-[10px] font-semibold transition-colors duration-300 active:scale-95"
       :class="i === activeIndex ? 'text-accent' : 'text-muted'"
     >
-      <component :is="item.icon" class="size-6 transition-transform duration-300" :class="{ 'scale-110': i === activeIndex }" :stroke-width="i === activeIndex ? 2.3 : 1.8" />
+      <component :is="item.icon" class="size-6" :class="{ 'tab-bounce': i === activeIndex }" :stroke-width="i === activeIndex ? 2.3 : 1.8" />
       {{ item.label }}
     </RouterLink>
   </nav>

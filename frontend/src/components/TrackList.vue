@@ -25,6 +25,8 @@ const OVERSCAN = 12
 const VIRTUAL_FROM = 120
 
 const root = ref<HTMLElement>()
+// The first screenful rises in when the list appears; later rows (and recycled virtual rows) just show.
+const entering = ref(true)
 const range = ref({ start: 0, end: VIRTUAL_FROM })
 let scroller: HTMLElement | Window = window
 
@@ -51,6 +53,7 @@ onMounted(() => {
   scroller.addEventListener('scroll', measure, { passive: true })
   addEventListener('resize', measure)
   measure()
+  setTimeout(() => (entering.value = false), 900)
 })
 onBeforeUnmount(() => {
   scroller.removeEventListener('scroll', measure)
@@ -76,6 +79,8 @@ function menu(track: Track, event: MouseEvent) {
         :index="item.index"
         :show-album="showAlbum"
         :numbered="numbered"
+        :class="entering && item.index < 15 ? 'rise' : ''"
+        :style="entering && item.index < 15 ? { '--i': item.index } : undefined"
         @play="play(item.index)"
         @menu="menu(item.track, $event)"
       />

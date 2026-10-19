@@ -32,7 +32,7 @@ function active(to: string, exact = false) {
 </script>
 
 <template>
-  <aside class="hidden w-64 shrink-0 flex-col gap-2 p-2 lg:flex xl:w-72">
+  <aside class="vt-sidebar hidden w-64 shrink-0 flex-col gap-2 p-2 lg:flex xl:w-72">
     <nav class="card space-y-1 p-3">
       <RouterLink to="/" class="mb-2 flex items-center gap-2.5 px-2 py-1">
         <img src="/logo.png" class="size-8 rounded-[22%]" alt="" />

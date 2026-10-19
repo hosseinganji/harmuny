@@ -1,6 +1,7 @@
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 import App from './App.vue'
+import { installPageMotion } from './lib/motion'
 import router from './router'
 import './style.css'
 
@@ -24,5 +25,7 @@ function fixIOSViewport() {
 fixIOSViewport()
 addEventListener('resize', fixIOSViewport)
 addEventListener('orientationchange', () => setTimeout(fixIOSViewport, 300))
+
+installPageMotion(router, () => document.querySelector<HTMLElement>('main[data-scroll]'))
 
 createApp(App).use(createPinia()).use(router).mount('#app')

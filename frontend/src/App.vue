@@ -2,7 +2,7 @@
 import { onKeyStroke, useOnline } from '@vueuse/core'
 import { WifiOff } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { type RouteLocationNormalizedLoaded, useRoute, useRouter } from 'vue-router'
 import { useRegisterSW } from 'virtual:pwa-register/vue'
 import AddToPlaylistDialog from '@/components/AddToPlaylistDialog.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -19,6 +19,7 @@ import Toasts from '@/components/Toasts.vue'
 import TrackMenu from '@/components/TrackMenu.vue'
 import { setUnauthorizedHandler } from '@/lib/api'
 import { setPlayerArtwork } from '@/lib/dynamicColor'
+import { viewTransitions } from '@/lib/motion'
 import { t } from '@/lib/i18n'
 import { useAuth } from '@/stores/auth'
 import { useDeviceSync } from '@/stores/deviceSync'
@@ -98,6 +99,11 @@ onKeyStroke(['s', 'S'], (e) => !typing(e) && !e.ctrlKey && !e.metaKey && player.
 onKeyStroke(['r', 'R'], (e) => !typing(e) && !e.ctrlKey && !e.metaKey && player.cycleRepeat())
 onKeyStroke(['l', 'L'], (e) => { if (!typing(e) && player.track) library.toggleLike(player.track) })
 onKeyStroke('/', (e) => { if (!typing(e)) { e.preventDefault(); router.push('/search') } })
+
+function pageKey(r: RouteLocationNormalizedLoaded) {
+  const root = r.matched[0]?.path
+  return root === '/library' || root === '/admin' ? root : r.name === 'search' ? r.path : r.fullPath
+}
 </script>
 
 <template>
@@ -110,14 +116,14 @@ onKeyStroke('/', (e) => { if (!typing(e)) { e.preventDefault(); router.push('/se
       <MobileTopBar v-if="route.name === 'home'" :safe="online" />
       <div class="flex min-h-0 flex-1">
         <AppSidebar @new-playlist="newPlaylist = true" />
-        <main data-scroll class="relative min-w-0 flex-1 overflow-y-auto overflow-x-hidden lg:card lg:my-2" :class="online ? (route.name === 'home' ? 'lg:pt-safe' : 'pt-safe') : ''">
+        <main data-scroll class="vt-page relative min-w-0 flex-1 overflow-y-auto overflow-x-hidden lg:card lg:my-2" :class="online ? (route.name === 'home' ? 'lg:pt-safe' : 'pt-safe') : ''">
           <RouterView v-slot="{ Component, route: r }">
-            <Transition name="page" mode="out-in">
-              <!-- Views have several root nodes; a single wrapper keeps the transition reliable. -->
-              <!-- Search keeps its query in the URL; remounting on every keystroke would close the keyboard. -->
-              <div :key="r.matched[0]?.path === '/library' || r.matched[0]?.path === '/admin' ? r.matched[0].path : r.name === 'search' ? r.path : r.fullPath">
-                <component :is="Component" />
-              </div>
+            <!-- With view transitions the browser animates the swap (see lib/motion.ts); otherwise a quick fade-in. -->
+            <!-- Views have several root nodes; a single keyed wrapper keeps the swap reliable. -->
+            <!-- Search keeps its query in the URL; remounting on every keystroke would close the keyboard. -->
+            <div v-if="viewTransitions" :key="pageKey(r)"><component :is="Component" /></div>
+            <Transition v-else name="page" mode="out-in">
+              <div :key="pageKey(r)"><component :is="Component" /></div>
             </Transition>
           </RouterView>
           <div class="h-40 lg:h-8" />
