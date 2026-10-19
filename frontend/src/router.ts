@@ -28,7 +28,7 @@ const router = createRouter({
     { path: '/settings', name: 'settings', component: () => import('@/views/SettingsView.vue') },
     { path: '/settings/equalizer', name: 'equalizer', component: () => import('@/views/EqualizerView.vue') },
     {
-      path: '/settings/:section(appearance|language|playback|storage|about)',
+      path: '/settings/:section(appearance|language|playback|notifications|storage|about)',
       name: 'settings-section',
       component: () => import('@/views/SettingsSectionView.vue'),
       props: true,

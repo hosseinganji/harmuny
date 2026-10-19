@@ -49,6 +49,8 @@ export default defineConfig(({ mode }) => {
           globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
           // icon.png is only the source the home-screen icons are generated from.
           globIgnores: ['icon.png'],
+          // New-song notifications (see public/push-sw.js).
+          importScripts: ['push-sw.js'],
           navigateFallback: '/index.html',
           navigateFallbackDenylist: [/^\/api\//],
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,

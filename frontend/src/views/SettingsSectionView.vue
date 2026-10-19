@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import { Check, ChevronLeft, Download, Monitor, Moon, Smartphone, Sun, Trash2 } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { Bell, Check, ChevronLeft, Download, Monitor, Moon, Smartphone, Sun, Trash2 } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import DeviceSyncPanel from '@/components/DeviceSyncPanel.vue'
 import { apiBase, isNative, savedApiBase, setApiBase } from '@/lib/config'
 import { db, kv } from '@/lib/db'
 import { LOCALES, t } from '@/lib/i18n'
+import { disablePush, enablePush, pushState, refreshPushState } from '@/lib/push'
 import { useLibrary } from '@/stores/library'
 import { useSettings } from '@/stores/settings'
 import { useUi } from '@/stores/ui'
 
-type SettingsSection = 'appearance' | 'language' | 'playback' | 'storage' | 'about'
+type SettingsSection = 'appearance' | 'language' | 'playback' | 'notifications' | 'storage' | 'about'
 const props = defineProps<{ section: SettingsSection }>()
 
 const library = useLibrary()
@@ -58,10 +59,25 @@ function saveServer() {
   ui.toast(t('toast.saved'), 'success')
 }
 
+const pushBusy = ref(false)
+onMounted(() => props.section === 'notifications' && refreshPushState())
+async function togglePush() {
+  pushBusy.value = true
+  try {
+    if (pushState.value === 'on') await disablePush()
+    else if (!(await enablePush()) && pushState.value !== 'denied') ui.toast(t('push.failed'), 'error')
+  } catch {
+    ui.toast(t('push.failed'), 'error')
+  } finally {
+    pushBusy.value = false
+  }
+}
+
 const titles = computed<Record<SettingsSection, string>>(() => ({
   appearance: t('settings.appearance'),
   language: t('settings.language'),
   playback: t('settings.playback'),
+  notifications: t('push.title'),
   storage: t('settings.storage'),
   about: t('settings.about'),
 }))
@@ -131,6 +147,34 @@ function back() {
         </label>
       </section>
       <DeviceSyncPanel />
+    </template>
+
+    <!-- Notifications -->
+    <template v-else-if="section === 'notifications'">
+      <section class="card space-y-4 p-5">
+        <div class="flex items-center gap-4">
+          <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent/15 text-accent"><Bell class="size-5" /></span>
+          <div class="min-w-0 flex-1">
+            <div class="font-semibold">{{ t('push.newSongs') }}</div>
+            <div class="text-sm text-muted">{{ t('push.newSongsHint') }}</div>
+          </div>
+          <button
+            v-if="pushState === 'on' || pushState === 'off'"
+            role="switch"
+            :aria-checked="pushState === 'on'"
+            :aria-label="t('push.newSongs')"
+            class="relative h-8 w-14 shrink-0 rounded-full transition-colors duration-300 disabled:opacity-50"
+            :class="pushState === 'on' ? 'bg-accent' : 'bg-fg/15'"
+            :disabled="pushBusy"
+            @click="togglePush"
+          >
+            <span class="absolute top-1 size-6 rounded-full bg-white shadow transition-[inset-inline-start] duration-300 ease-[var(--ease-sheet)]" :style="{ insetInlineStart: pushState === 'on' ? '1.75rem' : '0.25rem' }" />
+          </button>
+        </div>
+        <p v-if="pushState === 'install'" class="rounded-xl bg-accent/10 p-3 text-sm">{{ t('push.installFirst') }}</p>
+        <p v-else-if="pushState === 'denied'" class="rounded-xl bg-danger/10 p-3 text-sm text-danger">{{ t('push.denied') }}</p>
+        <p v-else-if="pushState === 'unsupported'" class="text-sm text-muted">{{ t('push.unsupported') }}</p>
+      </section>
     </template>
 
     <!-- Storage -->

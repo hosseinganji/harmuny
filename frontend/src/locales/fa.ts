@@ -190,6 +190,13 @@ export default {
   'mix.kicker': 'مخصوص تو',
   'mix.daily': 'میکس روزانه‌ی تو',
   'mix.dailyHint': '{n} آهنگ بر اساس سلیقه‌ات · هر روز تازه',
+  'push.title': 'اعلان‌ها',
+  'push.newSongs': 'آهنگ‌های جدید',
+  'push.newSongsHint': 'وقتی آهنگ جدیدی اضافه می‌شود اعلان بگیر.',
+  'push.installFirst': 'در آیفون اعلان‌ها فقط در برنامه‌ی نصب‌شده کار می‌کنند: در سافاری Share ← Add to Home Screen را بزن، بعد Harmony را از صفحه‌ی اصلی باز کن و این را روشن کن.',
+  'push.denied': 'اعلان‌ها برای این برنامه مسدود شده‌اند. از تنظیمات گوشی یا مرورگر اجازه بده و برگرد.',
+  'push.unsupported': 'این مرورگر نمی‌تواند اعلان نشان دهد.',
+  'push.failed': 'روشن کردن اعلان‌ها ممکن نشد.',
   'collection.downloaded': '{n} از {total} دانلود شده',
 
   'downloads.storage': '{size} دانلود شده',
