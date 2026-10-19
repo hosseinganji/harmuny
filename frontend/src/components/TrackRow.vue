@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useLikePop } from '@/lib/motion'
 import { ArrowDownCircle, CheckCircle2, Headphones, Heart, ListEnd, ListStart, MoreHorizontal, Pause, Play } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { count, duration, num } from '@/lib/format'
@@ -80,6 +81,7 @@ function onTouchEnd() {
 }
 
 const armed = computed(() => Math.abs(dx.value) >= SWIPE_TRIGGER)
+const likePop = useLikePop(() => library.isLiked(props.track))
 </script>
 
 <template>
@@ -150,7 +152,7 @@ const armed = computed(() => Math.abs(dx.value) >= SWIPE_TRIGGER)
       :aria-label="t('track.like')"
       @click.stop="library.toggleLike(track)"
     >
-      <Heart class="size-4.5" :class="{ 'fill-current': library.isLiked(track) }" />
+      <Heart class="size-4.5" :class="{ 'fill-current': library.isLiked(track), 'heart-pop': likePop }" />
     </button>
 
     <div class="hidden w-12 text-end text-sm text-subtle tabular sm:block">{{ duration(track.duration) }}</div>

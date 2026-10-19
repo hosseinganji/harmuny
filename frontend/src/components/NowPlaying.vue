@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useLikePop } from '@/lib/motion'
 import { ChevronDown, Download, Heart, ListMusic, MicVocal, MoreHorizontal } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { duration } from '@/lib/format'
@@ -61,6 +62,7 @@ const downloadState = computed(() => {
 function more(e: MouseEvent) {
   if (player.track) ui.openTrackMenu(player.track, e, { queueUid: player.current?.uid })
 }
+const likePop = useLikePop(() => !!player.track && library.isLiked(player.track))
 </script>
 
 <template>
@@ -103,13 +105,17 @@ function more(e: MouseEvent) {
             <!-- A size container: the artwork is the largest square that fits, so it can never spill onto the title. -->
             <div class="relative my-4 flex min-h-0 flex-1 items-center justify-center [container-type:size]" @touchstart.passive="tab === 'art' && touchStart($event)" @touchmove.passive="tab === 'art' && touchMove($event)" @touchend="tab === 'art' && touchEnd()">
               <div v-if="tab === 'art'" class="size-[min(100cqw,100cqh)] lg:max-h-112 lg:max-w-112">
-                <TrackCover
-                  :track="player.track"
-                  size="fill"
-                  rounded="rounded-3xl"
-                  class="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] transition-transform duration-500"
-                  :class="player.playing ? 'scale-100' : 'scale-[0.92]'"
-                />
+                <!-- Artwork eases into the next song; it also breathes in and out with play/pause. -->
+                <Transition name="art" mode="out-in">
+                  <TrackCover
+                    :key="player.current?.uid"
+                    :track="player.track"
+                    size="fill"
+                    rounded="rounded-3xl"
+                    class="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] transition-transform duration-700 ease-[var(--ease-spring)]"
+                    :class="player.playing ? 'scale-100' : 'scale-[0.92]'"
+                  />
+                </Transition>
               </div>
               <LyricsView v-else-if="tab === 'lyrics'" big class="absolute inset-0" />
               <div v-else class="absolute inset-0 overflow-y-auto">
@@ -145,7 +151,7 @@ function more(e: MouseEvent) {
                   :aria-label="t('track.like')"
                   @click="library.toggleLike(player.track)"
                 >
-                  <Heart class="size-7" :class="{ 'fill-current': library.isLiked(player.track) }" />
+                  <Heart class="size-7" :class="{ 'fill-current': library.isLiked(player.track), 'heart-pop': likePop }" />
                 </button>
               </div>
 

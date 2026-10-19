@@ -11,6 +11,7 @@ const props = withDefaults(defineProps<{ track?: Track | null; trackId?: number 
 })
 
 const failed = ref(false)
+const loaded = ref(false)
 // The server fetches missing artwork in the background, so retry a couple of times.
 const attempt = ref(0)
 let retryTimer: ReturnType<typeof setTimeout> | undefined
@@ -29,6 +30,7 @@ watch(
   () => props.track,
   async (t) => {
     failed.value = false
+    loaded.value = false
     attempt.value = 0
     clearTimeout(retryTimer)
     localSrc.value = t?.kind === 'local' && t.has_cover ? await useLocal().cover(t) : null
@@ -67,7 +69,9 @@ const iconClass = computed(() => ({ sm: 'size-4', md: 'size-5', lg: 'size-12', x
       loading="lazy"
       decoding="async"
       alt=""
-      class="size-full object-cover"
+      class="img-fade size-full object-cover"
+      :class="{ loaded }"
+      @load="loaded = true"
       @error="onError"
     />
     <div v-else class="flex size-full items-center justify-center text-white/80" :style="{ background: gradient }">

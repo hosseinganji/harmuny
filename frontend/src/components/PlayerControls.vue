@@ -34,9 +34,11 @@ const player = usePlayer()
       :aria-label="player.playing ? t('player.pause') : t('player.play')"
       @click="player.toggle()"
     >
-      <Loader2 v-if="player.loading && player.playing" class="animate-spin" :class="large ? 'size-8' : 'size-5'" />
-      <Pause v-else-if="player.playing" class="fill-current" :class="large ? 'size-8' : 'size-5'" />
-      <Play v-else class="translate-x-[1px] fill-current" :class="large ? 'size-8' : 'size-5'" />
+      <Transition name="icon" mode="out-in">
+        <Loader2 v-if="player.loading && player.playing" class="animate-spin" :class="large ? 'size-8' : 'size-5'" />
+        <Pause v-else-if="player.playing" class="fill-current" :class="large ? 'size-8' : 'size-5'" />
+        <Play v-else class="translate-x-[1px] fill-current" :class="large ? 'size-8' : 'size-5'" />
+      </Transition>
     </button>
     <button class="icon-btn text-fg" :class="large ? 'size-12 min-[400px]:size-14' : 'size-9'" :aria-label="t('player.next')" @click="player.next()">
       <SkipForward class="fill-current" :class="large ? 'size-8' : 'size-5'" />

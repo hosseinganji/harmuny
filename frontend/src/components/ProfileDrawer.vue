@@ -93,9 +93,10 @@ async function logout() {
 
         <nav class="flex-1 space-y-0.5 overflow-y-auto p-3">
           <RouterLink
-            v-for="item in items"
+            v-for="(item, i) in items"
             :key="item.to"
             :to="item.to"
+            :style="{ '--i': i }"
             class="flex items-center gap-4 rounded-2xl px-3 py-3 font-semibold transition hover:bg-fg/5 active:scale-[0.98]"
             :class="isActive(item.to) ? 'liquid-active text-accent' : ''"
           >
