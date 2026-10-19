@@ -184,6 +184,12 @@ export default {
   'collab.leave': 'Leave this playlist',
   'collab.leaveConfirm': 'Leave “{name}”? You will no longer be able to add songs to it.',
   'collab.addedBy': 'Added by {name}',
+  'radio.start': 'Start radio',
+  'radio.artist': 'Radio',
+  'radio.of': '{name} radio',
+  'mix.kicker': 'Made for you',
+  'mix.daily': 'Your daily mix',
+  'mix.dailyHint': '{n} songs from your taste · new every day',
   'collection.downloaded': '{n} of {total} downloaded',
 
   'downloads.storage': '{size} downloaded',

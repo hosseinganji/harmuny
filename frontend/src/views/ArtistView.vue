@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MicVocal } from 'lucide-vue-next'
+import { MicVocal, Radio } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import CollectionActions from '@/components/CollectionActions.vue'
 import CollectionHeader from '@/components/CollectionHeader.vue'
@@ -12,6 +12,7 @@ import { cachedGet } from '@/lib/cached'
 import { usePageColor } from '@/lib/dynamicColor'
 import { longDuration } from '@/lib/format'
 import { t } from '@/lib/i18n'
+import { startRadio } from '@/lib/radio'
 import { sortTracks, useTrackSort } from '@/lib/sortTracks'
 import type { ApiTrack, RemoteTrack } from '@/lib/types'
 import { useLibrary } from '@/stores/library'
@@ -52,7 +53,9 @@ onMounted(async () => {
         </div>
       </template>
     </CollectionHeader>
-    <CollectionActions :tracks="tracks" :context="{ type: 'artist', id: name, name }" />
+    <CollectionActions :tracks="tracks" :context="{ type: 'artist', id: name, name }">
+      <button class="btn-ghost h-10 px-4" @click="startRadio({ artist: name, name })"><Radio class="size-4" />{{ t('radio.artist') }}</button>
+    </CollectionActions>
     <div class="flex items-center justify-between gap-3 px-4 pb-2 sm:px-6">
       <h2 class="text-xl font-bold">{{ t('artist.popular') }}</h2>
       <SortSelect v-model="sort" />

@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\OnlineController;
 use App\Http\Controllers\Api\PlaylistController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\RadioController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\TrackController;
 use Illuminate\Support\Facades\Route;
@@ -54,6 +55,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('artists', [TrackController::class, 'artists']);
     Route::get('artist', [TrackController::class, 'artist']);
     Route::get('search', SearchController::class);
+    Route::get('radio', [RadioController::class, 'radio']);
+    Route::get('mixes/daily', [RadioController::class, 'dailyMix']);
 
     Route::get('likes', [LikeController::class, 'index']);
     Route::post('tracks/{track}/like', [LikeController::class, 'store']);
