@@ -1,0 +1,26 @@
+# Every push to main goes live: the server pulls main from GitHub and rebuilds (deploy/deploy.sh).
+# The DEPLOY_SSH_KEY secret is a key the server only accepts for running that deploy script.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Deploy main on the server
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          echo '[141.11.32.62]:9011 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH7f0zA1EG6DF059PqicSWjNTfAPtMe9QwzRaV9O+shX' > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy -p 9011 root@141.11.32.62
