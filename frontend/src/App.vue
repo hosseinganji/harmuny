@@ -20,6 +20,7 @@ import TrackMenu from '@/components/TrackMenu.vue'
 import { setUnauthorizedHandler } from '@/lib/api'
 import { setPlayerArtwork } from '@/lib/dynamicColor'
 import { viewTransitions } from '@/lib/motion'
+import { startPresence } from '@/lib/presence'
 import { t } from '@/lib/i18n'
 import { useAuth } from '@/stores/auth'
 import { useDeviceSync } from '@/stores/deviceSync'
@@ -61,6 +62,9 @@ async function boot() {
   // Keep this device's offline copy topped up (no-op unless enabled in settings).
   useDeviceSync().run()
 }
+
+// Shares the song being played with the online list (only while signed in).
+startPresence()
 
 onMounted(() => {
   if (auth.isLoggedIn) boot()

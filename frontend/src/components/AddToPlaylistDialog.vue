@@ -13,7 +13,8 @@ const creating = ref(false)
 const name = ref('')
 const busy = ref(false)
 
-const mine = computed(() => playlists.mine.filter((p) => p.is_owner))
+// Your own playlists and shared ones you may add to.
+const mine = computed(() => playlists.mine.filter((p) => p.can_edit ?? p.is_owner))
 const ids = computed(() => (ui.addToPlaylist ?? []).filter((t) => t.kind === 'remote').map((t) => t.id as number))
 
 watch(() => ui.addToPlaylist, (v) => {

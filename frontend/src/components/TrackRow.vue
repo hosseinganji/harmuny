@@ -8,6 +8,7 @@ import type { Track } from '@/lib/types'
 import { useDownloads } from '@/stores/downloads'
 import { useLibrary } from '@/stores/library'
 import { trackKey, usePlayer } from '@/stores/player'
+import Avatar from './Avatar.vue'
 import PlayingBars from './PlayingBars.vue'
 import TrackCover from './TrackCover.vue'
 
@@ -132,6 +133,14 @@ const likePop = useLikePop(() => library.isLiked(props.track))
       <div class="mt-0.5 flex items-center gap-1.5 truncate text-sm text-muted">
         <CheckCircle2 v-if="track.kind === 'remote' && downloads.sizes.has(track.id)" class="size-3.5 shrink-0 text-accent" />
         <span v-if="track.kind === 'local'" class="rounded bg-fg/10 px-1 text-[10px] font-semibold uppercase">{{ t('local.badge') }}</span>
+        <!-- Shared playlists: who added the song -->
+        <Avatar
+          v-if="track.kind === 'remote' && track.added_by"
+          :name="track.added_by.name"
+          :src="track.added_by.avatar_url"
+          size="size-4 text-[7px]"
+          :title="t('collab.addedBy', { name: track.added_by.name })"
+        />
         <span class="truncate">{{ shown.artist ?? t('track.unknownArtist') }}</span>
         <span v-if="showPlays" class="flex shrink-0 items-center gap-1 text-xs text-subtle tabular" :title="t('track.plays', { n: plays })">
           <span aria-hidden="true">·</span><Headphones class="size-3" />{{ count(plays) }}

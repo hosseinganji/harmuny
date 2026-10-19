@@ -3,17 +3,32 @@ import { useDocumentVisibility, useIntervalFn, useOnline } from '@vueuse/core'
 import { ref, watch } from 'vue'
 import Avatar from '@/components/Avatar.vue'
 import Modal from '@/components/Modal.vue'
+import { Play } from 'lucide-vue-next'
+import PlayingBars from '@/components/PlayingBars.vue'
+import TrackCover from '@/components/TrackCover.vue'
 import { api } from '@/lib/api'
 import { t } from '@/lib/i18n'
+import type { ApiTrack } from '@/lib/types'
 import { useAuth } from '@/stores/auth'
+import { useLibrary } from '@/stores/library'
+import { usePlayer } from '@/stores/player'
 import { useUi } from '@/stores/ui'
 
 /** safe: pad for the status bar (false when the offline banner above already does). */
 defineProps<{ safe: boolean }>()
 const auth = useAuth()
 const ui = useUi()
+const library = useLibrary()
+const player = usePlayer()
 
-interface OnlineUser { id: number; name: string; username: string; avatar_url: string | null; is_me: boolean }
+/** Play what a friend is listening to. */
+function listenAlong(track: ApiTrack) {
+  const [mine] = library.remember([track])
+  player.playTracks([mine], 0, { shuffle: false })
+  listOpen.value = false
+}
+
+interface OnlineUser { id: number; name: string; username: string; avatar_url: string | null; is_me: boolean; now_playing: ApiTrack | null }
 const online = ref<OnlineUser[]>([])
 const listOpen = ref(false)
 const visible = useDocumentVisibility()
@@ -64,7 +79,22 @@ watch(visible, (v) => v === 'visible' && refresh())
         </span>
         <span class="min-w-0 flex-1">
           <span class="block truncate font-semibold">{{ u.name }}<span v-if="u.is_me" class="ms-1 text-xs font-normal text-muted">({{ t('online.you') }})</span></span>
-          <span class="block truncate text-sm text-muted" dir="ltr">@{{ u.username }}</span>
+          <span v-if="!u.now_playing" class="block truncate text-sm text-muted" dir="ltr">@{{ u.username }}</span>
+          <!-- What they are listening to; tap to listen along. -->
+          <button
+            v-else
+            class="mt-1 flex w-full items-center gap-2 rounded-xl bg-fg/[0.06] p-1.5 pe-2 text-start transition hover:bg-fg/10 active:scale-[0.98]"
+            :disabled="u.is_me"
+            @click="listenAlong(u.now_playing)"
+          >
+            <TrackCover :track="{ ...u.now_playing, kind: 'remote' }" size="sm" rounded="rounded-md" />
+            <span class="min-w-0 flex-1">
+              <span class="flex items-center gap-1.5 text-[11px] font-semibold text-accent"><PlayingBars class="h-2.5" />{{ t('online.listening') }}</span>
+              <span class="block truncate text-sm font-semibold">{{ u.now_playing.title }}</span>
+              <span class="block truncate text-xs text-muted">{{ u.now_playing.artist ?? t('track.unknownArtist') }}</span>
+            </span>
+            <Play v-if="!u.is_me" class="size-5 shrink-0 fill-current text-fg" />
+          </button>
         </span>
       </li>
     </ul>

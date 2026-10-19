@@ -43,6 +43,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::delete('me/sessions/{id}', [ProfileController::class, 'revokeSession']);
     Route::get('me/stats', [ProfileController::class, 'stats']);
     Route::get('online', OnlineController::class);
+    Route::post('presence', [OnlineController::class, 'presence']);
 
     Route::get('home', [TrackController::class, 'home']);
     Route::get('library/sync', [TrackController::class, 'sync']);
@@ -70,6 +71,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('playlists/{playlist}/tracks', [PlaylistController::class, 'addTracks']);
     Route::delete('playlists/{playlist}/tracks/{entry}', [PlaylistController::class, 'removeTrack']);
     Route::put('playlists/{playlist}/order', [PlaylistController::class, 'reorder']);
+    Route::put('playlists/{playlist}/collaborators', [PlaylistController::class, 'setCollaborators']);
+    Route::delete('playlists/{playlist}/collaborators/me', [PlaylistController::class, 'leave']);
+    Route::get('members', [PlaylistController::class, 'members']);
     Route::post('playlists/{playlist}/cover', [PlaylistController::class, 'uploadCover']);
     Route::delete('playlists/{playlist}/cover', [PlaylistController::class, 'deleteCover']);
 
