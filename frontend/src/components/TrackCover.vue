@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Music2 } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { coverUrl } from '@/lib/api'
 import type { Track } from '@/lib/types'
 import { useLocal } from '@/stores/local'
@@ -30,7 +30,6 @@ watch(
   () => props.track,
   async (t) => {
     failed.value = false
-    loaded.value = false
     attempt.value = 0
     clearTimeout(retryTimer)
     localSrc.value = t?.kind === 'local' && t.has_cover ? await useLocal().cover(t) : null
@@ -57,6 +56,16 @@ function onError() {
 }
 onBeforeUnmount(() => clearTimeout(retryTimer))
 
+// Fade a cover in only when a different image starts loading. Lists often hand over a fresh copy of the
+// same track; resetting then would hide an image that never fires `load` again (it is already loaded).
+const img = ref<HTMLImageElement>()
+watch(src, async (next, prev) => {
+  if (next === prev) return
+  loaded.value = false
+  await nextTick()
+  if (img.value?.complete && img.value.naturalWidth) loaded.value = true
+})
+
 const sizeClass = computed(() => ({ sm: 'size-10', md: 'size-12', lg: 'size-40', xl: 'size-56', fill: 'w-full aspect-square' })[props.size])
 const iconClass = computed(() => ({ sm: 'size-4', md: 'size-5', lg: 'size-12', xl: 'size-16', fill: 'size-1/3' })[props.size])
 </script>
@@ -69,6 +78,7 @@ const iconClass = computed(() => ({ sm: 'size-4', md: 'size-5', lg: 'size-12', x
       loading="lazy"
       decoding="async"
       alt=""
+      ref="img"
       class="img-fade size-full object-cover"
       :class="{ loaded }"
       @load="loaded = true"
