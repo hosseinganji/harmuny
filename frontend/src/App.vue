@@ -61,7 +61,10 @@ async function boot() {
   library.sync()
   player.flushPlays()
   // Keep this device's offline copy topped up (no-op unless enabled in settings).
-  useDeviceSync().run()
+  const deviceSync = useDeviceSync()
+  deviceSync.run()
+  // Liked songs and auto-download playlists catch up on anything added meanwhile.
+  deviceSync.runAuto()
 }
 
 // Shares the song being played with the online list (only while signed in).

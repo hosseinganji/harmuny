@@ -2,9 +2,11 @@ import { useIntervalFn, useOnline } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import type { RemoteTrack } from '@/lib/types'
+import { useAuth } from './auth'
 import { useDownloads } from './downloads'
 import { useLibrary } from './library'
 import { usePlaylists } from './playlists'
+import { useSettings } from './settings'
 
 export type SyncMode = 'off' | 'all' | 'liked' | 'selected'
 export type PausedReason = 'offline' | 'cellular' | 'storage' | 'manual' | null
@@ -142,15 +144,68 @@ export const useDeviceSync = defineStore('deviceSync', () => {
     return tracks.length
   }
 
+  // ---- Auto-download: liked songs and chosen playlists, kept downloaded as they change ----------------
+  //
+  // Not tied to the moment a song is liked or added: every run compares what should be on this device with
+  // what is, so likes from other devices, songs added by collaborators and anything missed while offline
+  // are all caught up.
+
+  const settings = useSettings()
+  const auth = useAuth()
+  const autoKey = () => `smp.autoPlaylists.${auth.user?.id ?? 0}`
+  const autoPlaylistIds = ref<number[]>(JSON.parse(localStorage.getItem(autoKey()) ?? '[]'))
+  watch(() => auth.user?.id, () => (autoPlaylistIds.value = JSON.parse(localStorage.getItem(autoKey()) ?? '[]')))
+  watch(autoPlaylistIds, (ids) => localStorage.setItem(autoKey(), JSON.stringify(ids)), { deep: true })
+
+  const isAutoPlaylist = (id: number) => autoPlaylistIds.value.includes(id)
+
+  function toggleAutoPlaylist(id: number) {
+    autoPlaylistIds.value = isAutoPlaylist(id) ? autoPlaylistIds.value.filter((x) => x !== id) : [...autoPlaylistIds.value, id]
+    runAuto()
+  }
+
+  let autoRunning = false
+  let autoAgain = false
+  async function runAuto() {
+    if (autoRunning) return void (autoAgain = true)
+    if (!online.value || !auth.isLoggedIn) return
+    autoRunning = true
+    try {
+      const want: RemoteTrack[] = []
+      if (settings.prefs.autoDownloadLiked) want.push(...library.likedTracks)
+      for (const id of autoPlaylistIds.value) {
+        try {
+          const p = await playlists.get(id)
+          want.push(...(p.tracks ?? []).map((tr) => library.get(tr.id) ?? ({ ...tr, kind: 'remote' } as RemoteTrack)))
+        } catch {
+          // Offline, or the playlist is gone: skip it this time.
+        }
+      }
+      const missing = [...new Map(want.map((t) => [t.id, t])).values()].filter((t) => !downloads.sizes.has(t.id) && !downloads.progress.has(t.id))
+      if (missing.length) downloads.download(missing, { silent: true })
+    } finally {
+      autoRunning = false
+      if (autoAgain) {
+        autoAgain = false
+        runAuto()
+      }
+    }
+  }
+
   // Triggers: back online, network type changes, new catalog data, and a periodic check.
-  watch(online, (v) => v && run())
-  watch(() => library.syncing, (busy) => !busy && run())
+  watch(online, (v) => v && (run(), runAuto()))
+  watch(() => library.syncing, (busy) => !busy && (run(), runAuto()))
   watch(() => config.value.wifiOnly, () => run())
   ;(navigator as any).connection?.addEventListener?.('change', () => run())
-  useIntervalFn(() => run(), 15 * 60 * 1000)
+  watch(() => library.liked, () => settings.prefs.autoDownloadLiked && runAuto())
+  watch(() => settings.prefs.autoDownloadLiked, (on) => on && runAuto())
+  addEventListener('playlist:changed', (e) => isAutoPlaylist(Number((e as CustomEvent).detail)) && runAuto())
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && runAuto())
+  useIntervalFn(() => (run(), runAuto()), 15 * 60 * 1000)
 
   return {
     config, paused, target, onDevice, waitingForServer, targetBytes,
     run, setMode, togglePlaylist, pause, resume, removeOutside,
+    autoPlaylistIds, isAutoPlaylist, toggleAutoPlaylist, runAuto,
   }
 })

@@ -170,6 +170,8 @@ export default {
   'playlist.noneYetHint': 'یکی بساز و از منوی هر آهنگ به آن اضافه کن.',
   'playlist.empty': 'این پلی‌لیست خالی است',
   'playlist.emptyHint': 'آهنگ پیدا کن و با «افزودن به پلی‌لیست» اضافه‌اش کن.',
+  'playlist.autoDownload': 'دانلود خودکار',
+  'playlist.autoDownloadHint': 'این پلی‌لیست روی این دستگاه دانلود شود، و هر آهنگی که از این به بعد به آن اضافه شود هم.',
   'playlist.edit': 'ویرایش پلی‌لیست',
   'playlist.changeCover': 'تغییر کاور',
   'playlist.removeCover': 'حذف کاور',
@@ -199,6 +201,9 @@ export default {
   'push.failed': 'روشن کردن اعلان‌ها ممکن نشد.',
   'collection.downloaded': '{n} از {total} دانلود شده',
 
+  'downloads.retry': 'تلاش دوباره',
+  'downloads.failedMany': '{n} آهنگ دانلود نشد',
+  'downloads.full': 'فضای این دستگاه برای برنامه پر شده. کمی فضا آزاد کن یا دانلودها را کم کن و دوباره امتحان کن.',
   'downloads.storage': '{size} دانلود شده',
   'downloads.offlineHint': 'آهنگ‌های دانلودشده بدون اینترنت پخش می‌شوند.',
   'downloads.quota': '{used} از {total} فضای مرورگر استفاده شده',

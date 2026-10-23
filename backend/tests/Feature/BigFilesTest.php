@@ -35,4 +35,20 @@ class BigFilesTest extends TestCase
     {
         $this->assertSame(20 * 1048576, config('music.bot.max_file_bytes'));
     }
+
+    public function test_a_dropped_connection_to_telegram_is_retried(): void
+    {
+        Setting::putSecret('telegram.bot_token', '123:'.str_repeat('a', 35));
+        $tries = 0;
+        Http::fake(function () use (&$tries) {
+            if (++$tries < 3) {
+                throw new \Illuminate\Http\Client\ConnectionException('cURL error 35: Recv failure: Connection reset by peer');
+            }
+
+            return Http::response(['ok' => true, 'result' => ['id' => 42, 'is_bot' => true, 'username' => 'harmony_bot']]);
+        });
+
+        $this->assertSame('harmony_bot', app(BotClient::class)->getMe()['username']);
+        $this->assertSame(3, $tries);
+    }
 }

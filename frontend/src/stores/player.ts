@@ -45,9 +45,15 @@ export function trackKey(track: Track) {
   return (track.kind === 'remote' ? 'r' : 'l') + track.id
 }
 
+function createAudio(): HTMLAudioElement {
+  const el = new Audio()
+  el.preload = 'auto'
+  return el
+}
+
 export const usePlayer = defineStore('player', () => {
-  const audio = new Audio()
-  audio.preload = 'auto'
+  // The element can be swapped for a fresh one (see swapAudioElement), so it is a `let`.
+  let audio = createAudio()
   // Audio Session API (Safari 16.4+): mark this as music playback, so iOS keeps the sound going
   // with the screen locked or the app in the background, as it does for native music apps.
   const audioSession = (navigator as { audioSession?: { type: string } }).audioSession
@@ -111,9 +117,12 @@ export const usePlayer = defineStore('player', () => {
     duration.value = item.track.duration || 0
     buffered.value = 0
     try {
-      const src = await sourceFor(item.track)
+      // A source prepared while the previous song played is used straight away, with nothing to await:
+      // iOS only lets a background app start the next song if it happens right as the last one ends.
+      const ready = takePrepared(item.uid)
+      const src = ready ?? (await sourceFor(item.track))
       if (current.value?.uid !== item.uid) return // the user skipped meanwhile
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
+      if (objectUrl && objectUrl !== src) URL.revokeObjectURL(objectUrl)
       objectUrl = src.startsWith('blob:') ? src : null
       audio.src = src
       audio.playbackRate = rate.value
@@ -127,17 +136,91 @@ export const usePlayer = defineStore('player', () => {
     updateMediaSession()
   }
 
+  /** The user wants music playing (cleared by pause), so a start the system refused can be retried. */
+  let wantPlay = false
+  let blocked = false
+
   async function play() {
+    wantPlay = true
     if (!audio.src && current.value) return load(true, currentTime.value)
     try {
       await audio.play()
+      blocked = false
     } catch (e) {
-      if ((e as Error).name !== 'AbortError') playing.value = false
+      const name = (e as Error).name
+      if (name === 'NotAllowedError') blocked = true // e.g. iOS in the background; retried below
+      if (name !== 'AbortError') playing.value = false
     }
   }
 
   function pause() {
+    wantPlay = false
+    blocked = false
     audio.pause()
+  }
+
+  // A start iOS refused (screen locked, app in the background) goes ahead as soon as it is allowed:
+  // when the app is in view again, or on the next tap anywhere.
+  const retryBlocked = () => {
+    if (blocked && wantPlay && audio.paused && current.value) play()
+  }
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && retryBlocked())
+  addEventListener('pointerdown', retryBlocked, true)
+
+  // ---- the next song, prepared ahead ---------------------------------------
+
+  let prepared: { uid: string; src: string } | null = null
+
+  function takePrepared(uid: string): string | null {
+    if (prepared?.uid !== uid) return null
+    const src = prepared.src
+    prepared = null
+    return src
+  }
+
+  /** While a song plays, resolve the next one's source, and have the server fetch it if it lacks it. */
+  async function prepareNext() {
+    const next = queue.value[index.value + 1] ?? (repeat.value === 'all' ? queue.value[0] : undefined)
+    if (!next || next.uid === current.value?.uid || prepared?.uid === next.uid) return
+    if (prepared?.src.startsWith('blob:')) URL.revokeObjectURL(prepared.src)
+    prepared = null
+    try {
+      const src = await sourceFor(next.track)
+      prepared = { uid: next.uid, src }
+      // Not stored on the server yet: ask for the first byte now so the server starts fetching it from Telegram.
+      if (!src.startsWith('blob:') && next.track.kind === 'remote' && next.track.on_server === false) {
+        fetch(src, { headers: { Range: 'bytes=0-0' } }).catch(() => {})
+      }
+    } catch {
+      // Offline and not downloaded: load() deals with it when the time comes.
+    }
+  }
+
+  /**
+   * Move playback to a fresh, plain <audio> element at the same spot. The equalizer uses this on iPhone:
+   * an element routed through Web Audio goes silent when iOS suspends the audio context, a plain one
+   * keeps playing in the background.
+   */
+  function swapAudioElement(): HTMLAudioElement {
+    const old = audio
+    const wasPlaying = !old.paused
+    const fresh = createAudio()
+    fresh.volume = old.volume
+    fresh.muted = old.muted
+    fresh.playbackRate = old.playbackRate
+    audioEvents.abort()
+    audio = fresh
+    audioEvents = attachAudioEvents(fresh)
+    const src = old.currentSrc || old.src
+    if (src) {
+      restoreTime = old.currentTime
+      fresh.src = src
+      if (wasPlaying) fresh.play().catch(() => (blocked = true))
+    }
+    old.pause()
+    old.removeAttribute('src')
+    old.load()
+    return fresh
   }
 
   function toggle() {
@@ -357,60 +440,70 @@ export const usePlayer = defineStore('player', () => {
 
   // ---- audio element events -----------------------------------------------
 
-  audio.addEventListener('play', () => (playing.value = true))
-  audio.addEventListener('pause', () => (playing.value = false))
-  audio.addEventListener('playing', () => {
-    loading.value = false
-    consecutiveErrors = 0
-  })
-  audio.addEventListener('waiting', () => (loading.value = true))
-  audio.addEventListener('canplay', () => (loading.value = false))
-  audio.addEventListener('loadedmetadata', () => {
-    if (isFinite(audio.duration)) duration.value = audio.duration
-    if (restoreTime) {
-      audio.currentTime = restoreTime
-      restoreTime = 0
-    }
-  })
-  audio.addEventListener('durationchange', () => {
-    if (isFinite(audio.duration)) duration.value = audio.duration
-  })
-  audio.addEventListener('progress', () => {
-    const b = audio.buffered
-    buffered.value = b.length ? b.end(b.length - 1) : 0
-  })
-  audio.addEventListener('timeupdate', () => {
-    const now = audio.currentTime
-    const delta = now - lastTick
-    if (delta > 0 && delta < 2 && !audio.paused) listened += delta / (audio.playbackRate || 1)
-    lastTick = now
-    currentTime.value = now
-    if (sleep.value?.mode === 'time' && Date.now() >= sleep.value.endsAt) {
-      sleep.value = null
-      pause()
-    }
-    updatePositionState()
-  })
-  audio.addEventListener('ended', () => {
-    if (sleep.value?.mode === 'track') {
-      sleep.value = null
-      commitListen()
-      playing.value = false
-      return
-    }
-    if (repeat.value === 'one') {
-      commitListen()
-      audio.currentTime = 0
-      play()
-      return
-    }
-    next(true)
-  })
-  audio.addEventListener('error', () => {
-    if (!audio.getAttribute('src')) return
-    loading.value = false
-    handleError(navigator.onLine ? t('player.cannotPlay') : t('player.offlineSkip'), true)
-  })
+  /** Wire the player to an element; aborting the returned controller unhooks it again. */
+  function attachAudioEvents(el: HTMLAudioElement): AbortController {
+    const controller = new AbortController()
+    const on = (type: string, handler: () => void) => el.addEventListener(type, handler, { signal: controller.signal })
+    on('play', () => (playing.value = true))
+    on('pause', () => (playing.value = false))
+    on('playing', () => {
+      loading.value = false
+      consecutiveErrors = 0
+      blocked = false
+      prepareNext()
+    })
+    on('waiting', () => (loading.value = true))
+    on('canplay', () => (loading.value = false))
+    on('loadedmetadata', () => {
+      if (isFinite(audio.duration)) duration.value = audio.duration
+      if (restoreTime) {
+        audio.currentTime = restoreTime
+        restoreTime = 0
+      }
+    })
+    on('durationchange', () => {
+      if (isFinite(audio.duration)) duration.value = audio.duration
+    })
+    on('progress', () => {
+      const b = audio.buffered
+      buffered.value = b.length ? b.end(b.length - 1) : 0
+    })
+    on('timeupdate', () => {
+      const now = audio.currentTime
+      const delta = now - lastTick
+      if (delta > 0 && delta < 2 && !audio.paused) listened += delta / (audio.playbackRate || 1)
+      lastTick = now
+      currentTime.value = now
+      if (sleep.value?.mode === 'time' && Date.now() >= sleep.value.endsAt) {
+        sleep.value = null
+        pause()
+      }
+      updatePositionState()
+    })
+    on('ended', () => {
+      if (sleep.value?.mode === 'track') {
+        sleep.value = null
+        commitListen()
+        playing.value = false
+        return
+      }
+      if (repeat.value === 'one') {
+        commitListen()
+        audio.currentTime = 0
+        play()
+        return
+      }
+      next(true)
+    })
+    on('error', () => {
+      if (!audio.getAttribute('src')) return
+      loading.value = false
+      handleError(navigator.onLine ? t('player.cannotPlay') : t('player.offlineSkip'), true)
+    })
+    on('playing', registerMediaHandlers)
+    return controller
+  }
+  let audioEvents = attachAudioEvents(audio)
 
   // ---- artwork & media session --------------------------------------------
 
@@ -480,7 +573,6 @@ export const usePlayer = defineStore('player', () => {
     }
   }
   registerMediaHandlers()
-  audio.addEventListener('playing', registerMediaHandlers)
 
   watch(playing, (p) => {
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = p ? 'playing' : 'paused'
@@ -550,7 +642,10 @@ export const usePlayer = defineStore('player', () => {
   }
 
   return {
-    audio, queue, index, current, track, upcoming, history, shuffle, repeat, playing, loading,
+    /** The current element (it can be swapped, so always read it through this). */
+    getAudio: () => audio,
+    swapAudioElement,
+    queue, index, current, track, upcoming, history, shuffle, repeat, playing, loading,
     currentTime, duration, buffered, progress, volume, muted, rate, sleep, context, coverSrc,
     play, pause, toggle, next, prev, seek, seekBy,
     playTracks, playNext, addToQueue, remove, setUpcoming, clearUpcoming, jump,

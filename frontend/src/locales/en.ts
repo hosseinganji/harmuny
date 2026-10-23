@@ -170,6 +170,8 @@ export default {
   'playlist.noneYetHint': 'Create one and add songs from any song’s menu.',
   'playlist.empty': 'This playlist is empty',
   'playlist.emptyHint': 'Find songs and add them with “Add to playlist”.',
+  'playlist.autoDownload': 'Auto-download',
+  'playlist.autoDownloadHint': 'Download this playlist to this device, and every song added to it from now on.',
   'playlist.edit': 'Edit playlist',
   'playlist.changeCover': 'Change cover',
   'playlist.removeCover': 'Remove cover',
@@ -199,6 +201,9 @@ export default {
   'push.failed': 'Couldn\'t turn notifications on.',
   'collection.downloaded': '{n} of {total} downloaded',
 
+  'downloads.retry': 'Retry',
+  'downloads.failedMany': '{n} songs couldn\'t be downloaded',
+  'downloads.full': 'This device is out of space for the app. Free some space or remove downloads, then try again.',
   'downloads.storage': '{size} downloaded',
   'downloads.offlineHint': 'Downloaded songs play without internet.',
   'downloads.quota': '{used} of {total} available browser storage in use',

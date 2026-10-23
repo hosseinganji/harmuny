@@ -19,6 +19,7 @@ import { duration, longDuration } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { sortTracks, useTrackSort } from '@/lib/sortTracks'
 import type { Playlist, RemoteTrack } from '@/lib/types'
+import { useDeviceSync } from '@/stores/deviceSync'
 import { toRemote, useLibrary } from '@/stores/library'
 import { usePlaylists } from '@/stores/playlists'
 import { useUi } from '@/stores/ui'
@@ -39,6 +40,7 @@ const form = ref({ name: '', description: '', is_public: false })
 const busy = ref(false)
 
 const library = useLibrary()
+const deviceSync = useDeviceSync()
 const tracks = computed<RemoteTrack[]>(() => (playlist.value?.tracks ?? []).map(toRemote))
 const sort = useTrackSort('playlist', 'natural')
 const sorted = computed(() => sortTracks(tracks.value, sort.value, library.playsOf))
@@ -165,6 +167,12 @@ async function finishReorder() {
         <button class="icon-btn" :title="t('common.edit')" @click="openEdit"><Pencil class="size-5" /></button>
       </template>
       <button v-else-if="canEdit" class="icon-btn" :title="t('collab.leave')" @click="leave"><LogOut class="size-5 rtl:rotate-180" /></button>
+      <!-- Keep this playlist downloaded on this device: now, and whenever songs are added to it. -->
+      <label class="flex cursor-pointer items-center gap-2 text-sm text-muted" :title="t('playlist.autoDownloadHint')">
+        <span class="hidden sm:inline">{{ t('playlist.autoDownload') }}</span>
+        <span class="sm:hidden">{{ t('settings.autoDownloadShort') }}</span>
+        <input type="checkbox" class="size-4 accent-[var(--accent)]" :checked="deviceSync.isAutoPlaylist(id)" @change="deviceSync.toggleAutoPlaylist(id)" />
+      </label>
       <button v-if="tracks.length" class="icon-btn" :title="t('track.more')" @click="ui.openTrackMenu(tracks, $event)"><MoreHorizontal class="size-5" /></button>
     </CollectionActions>
 
