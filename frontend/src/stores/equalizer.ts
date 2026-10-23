@@ -76,12 +76,21 @@ export const useEqualizer = defineStore('equalizer', () => {
   let limiter: DynamicsCompressorNode
 
   /** Must run from a user gesture the first time (browsers only start audio from one). */
+  // The element this graph is wired to (createMediaElementSource is permanent for an element).
+  let wired: HTMLAudioElement | null = null
+  let elementEvents: AbortController | null = null
+  let silentSince = 0
+
+  /** Must run from a user gesture the first time (browsers only start audio from one). */
   function connect() {
-    if (ctx) return
-    const audio = usePlayer().audio
+    const player = usePlayer()
+    const audio = player.getAudio()
+    if (ctx && wired === audio) return
+    if (ctx) detach() // the player moved to a new element; rebuild on that one
     // Needed when the server is on another origin (the Android app); same-origin is unaffected.
     audio.crossOrigin = 'anonymous'
     ctx = new AudioContext({ latencyHint: 'playback' })
+    wired = audio
     const source = ctx.createMediaElementSource(audio)
     preamp = ctx.createGain()
     filters = BANDS.map((_, i) => {
@@ -106,16 +115,48 @@ export const useEqualizer = defineStore('equalizer', () => {
     node.connect(mixer).connect(panner).connect(leveler).connect(headroom).connect(limiter).connect(ctx.destination)
     apply(true)
 
-    // iOS suspends ("interrupts") the context when the screen locks or the app goes to the background,
-    // which silences the song while it keeps playing. Wake it straight back up whenever music is playing.
+    // Keep the context running whenever music plays; iOS suspends it with the page.
+    elementEvents = new AbortController()
+    const signal = elementEvents.signal
     const keepRunning = () => {
       if (ctx && ctx.state !== 'running' && !audio.paused) ctx.resume().catch(() => {})
     }
-    ctx.addEventListener('statechange', keepRunning)
-    audio.addEventListener('play', keepRunning)
-    audio.addEventListener('playing', keepRunning)
-    document.addEventListener('visibilitychange', keepRunning)
+    ctx.addEventListener('statechange', keepRunning, { signal })
+    audio.addEventListener('play', keepRunning, { signal })
+    audio.addEventListener('playing', keepRunning, { signal })
+    // Watchdog: the song plays but the context stays stuck (an iOS interruption, a call, Siri…) means
+    // silence that only a restart used to fix. Move the song to a plain element so it is heard again.
+    audio.addEventListener('timeupdate', () => {
+      if (!ctx || audio.paused || ctx.state === 'running') return void (silentSince = 0)
+      silentSince ||= Date.now()
+      if (Date.now() - silentSince > 2500) rescue()
+    }, { signal })
   }
+
+  /** Drop the graph (the element it was wired to is no longer the player's). */
+  function detach() {
+    elementEvents?.abort()
+    elementEvents = null
+    ctx?.close().catch(() => {})
+    ctx = null
+    wired = null
+    silentSince = 0
+  }
+
+  /** Hand the song to a plain element so it keeps sounding; the equalizer comes back on the next tap in view. */
+  function rescue() {
+    if (!ctx) return
+    detach()
+    usePlayer().swapAudioElement()
+    resumeOnGesture()
+  }
+
+  // iPhone suspends Web Audio when the app goes to the background or the screen locks, which made songs
+  // play in silence. Before that happens, move playback to a plain element (which iOS keeps playing).
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
+  document.addEventListener('visibilitychange', () => {
+    if (isIOS && document.visibilityState === 'hidden' && ctx && !usePlayer().getAudio().paused) rescue()
+  })
 
   /** Glide a parameter to its new value (no zipper noise, no piled-up automation). */
   function glide(param: AudioParam, value: number, immediate = false) {
@@ -166,12 +207,16 @@ export const useEqualizer = defineStore('equalizer', () => {
     apply()
   }, { deep: true })
 
-  /** Reconnect a saved, enabled equalizer on the first tap anywhere after launch. */
+  /** Reconnect a saved, enabled equalizer on the first tap anywhere while the app is in view. */
+  let armed = false
   function resumeOnGesture() {
-    if (!state.value.enabled) return
+    if (!state.value.enabled || armed) return
+    armed = true
     const start = () => {
-      connect()
+      if (document.visibilityState !== 'visible') return
+      armed = false
       removeEventListener('pointerdown', start, true)
+      if (state.value.enabled) connect()
     }
     addEventListener('pointerdown', start, true)
   }

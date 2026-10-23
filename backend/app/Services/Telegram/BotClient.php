@@ -53,10 +53,16 @@ class BotClient
             throw new BotApiException('The bot token is not configured.');
         }
 
-        for ($attempt = 0; ; $attempt++) {
+        for ($attempt = 0, $dropped = 0; ; $attempt++) {
             try {
                 $response = $this->http($timeout)->post("/bot{$token}/{$method}", $params);
             } catch (ConnectionException $e) {
+                // The route to Telegram sometimes resets a connection ("Recv failure"); try twice more.
+                if (++$dropped <= 2) {
+                    usleep(700_000 * $dropped);
+
+                    continue;
+                }
                 throw self::unreachable($e, $token);
             }
             $body = $response->json() ?? [];

@@ -7,6 +7,14 @@ import type { RemoteTrack, Track } from '@/lib/types'
 import { useUi } from './ui'
 
 const CONCURRENCY = 2
+const RETRIES = 3
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** A download stopped by the app going to the background (iOS cuts its network): resume, don't fail. */
+class Interrupted extends Error {}
+/** The device has no room left for the app. */
+class StorageFull extends Error {}
 
 /** Tracks saved to IndexedDB for offline playback. */
 export const useDownloads = defineStore('downloads', () => {
@@ -65,15 +73,50 @@ export const useDownloads = defineStore('downloads', () => {
 
   const queued = computed(() => progress.size)
 
+  // Several songs failing together (a whole artist or playlist) make one message with a Retry button.
+  let failedBatch: { track: RemoteTrack; silent: boolean }[] = []
+  let failedTimer: ReturnType<typeof setTimeout> | undefined
+  function reportFailure(track: RemoteTrack, silent: boolean) {
+    failedBatch.push({ track, silent })
+    clearTimeout(failedTimer)
+    failedTimer = setTimeout(() => {
+      const shown = failedBatch.filter((f) => !f.silent)
+      failedBatch = []
+      if (!shown.length) return
+      const retry = { label: t('downloads.retry'), run: () => download(shown.map((f) => f.track)) }
+      useUi().toast(
+        shown.length === 1 ? t('toast.downloadFailed', { title: shown[0].track.title }) : t('downloads.failedMany', { n: shown.length }),
+        'error',
+        retry,
+      )
+    }, 1500)
+  }
+
+  let storageWarned = false
+
   function pump() {
+    // iOS cuts network requests of an app in the background: wait until it is in view again.
+    if (isIOS && document.visibilityState === 'hidden') return
     while (active < CONCURRENCY && pending.length) {
-      const { track, silent } = pending.shift()!
+      const job = pending.shift()!
+      const { track, silent } = job
       active++
       fetchTrack(track)
-        .catch(() => {
+        .catch((e) => {
+          if (e instanceof Interrupted) {
+            pending.unshift(job) // picked up again when the app is back in view
+            return
+          }
           progress.delete(track.id)
+          if (e instanceof StorageFull) {
+            // Nothing else fits either: stop the queue and say so once.
+            for (const p of pending.splice(0)) progress.delete(p.track.id)
+            if (!storageWarned) useUi().toast(t('downloads.full'), 'error')
+            storageWarned = true
+            return
+          }
           failed.add(track.id)
-          if (!silent) useUi().toast(t('toast.downloadFailed', { title: track.title }), 'error')
+          reportFailure(track, silent)
         })
         .finally(() => {
           active--
@@ -81,8 +124,26 @@ export const useDownloads = defineStore('downloads', () => {
         })
     }
   }
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && pump())
+  addEventListener('online', () => pump())
 
+  /** Download with retries: dropped connections and busy servers are retried, with a growing pause. */
   async function fetchTrack(track: RemoteTrack) {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await fetchOnce(track)
+      } catch (e) {
+        if (e instanceof StorageFull) throw e
+        if (document.visibilityState === 'hidden' || !navigator.onLine) throw new Interrupted()
+        const status = Number((e as Error).message)
+        const retryable = !status || status >= 500 || status === 429 || status === 408
+        if (!retryable || attempt >= RETRIES) throw e
+        await wait(2000 * attempt * attempt)
+      }
+    }
+  }
+
+  async function fetchOnce(track: RemoteTrack) {
     const response = await fetch(streamUrl(track.id))
     if (!response.ok || !response.body) throw new Error(String(response.status))
 
@@ -100,7 +161,13 @@ export const useDownloads = defineStore('downloads', () => {
 
     const mime = track.mime_type || response.headers.get('Content-Type') || 'audio/mpeg'
     const blob = new Blob(chunks, { type: mime })
-    await db.downloads.put({ trackId: track.id, blob, size: blob.size, mime, downloadedAt: Date.now() })
+    try {
+      await db.downloads.put({ trackId: track.id, blob, size: blob.size, mime, downloadedAt: Date.now() })
+    } catch (e) {
+      const name = (e as { name?: string; inner?: { name?: string } }).inner?.name ?? (e as { name?: string }).name
+      if (name === 'QuotaExceededError') throw new StorageFull()
+      throw e
+    }
     // Make sure the track's metadata and artwork are available offline too.
     await db.tracks.put(track)
     if (track.has_cover) fetch(coverUrl(track.id, track.updated_at)).catch(() => {})

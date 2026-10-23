@@ -62,6 +62,8 @@ export const usePlaylists = defineStore('playlists', () => {
     const res = await api.post<{ data: Playlist }>(`/playlists/${id}/tracks`, { track_ids: trackIds })
     upsert(res.data)
     useUi().toast(t('toast.addedToPlaylist', { name: res.data.name }), 'success')
+    // Open views refresh, and an auto-downloading playlist fetches the new songs.
+    window.dispatchEvent(new CustomEvent('playlist:changed', { detail: id }))
     return res.data
   }
 
