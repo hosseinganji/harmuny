@@ -26,7 +26,8 @@ function shuffleAll() {
 </script>
 
 <template>
-  <div class="flex items-center gap-3 px-4 py-4 sm:px-6">
+  <!-- The round buttons never shrink (squeezed, they turn into ovals); the extra icons on the end stay compact. -->
+  <div class="flex items-center gap-2.5 px-4 py-4 sm:gap-3 sm:px-6 [&>button]:shrink-0">
     <button
       class="flex size-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-xl transition hover:scale-105 active:scale-95 disabled:opacity-40"
       style="box-shadow: 0 10px 30px -10px var(--accent)"
@@ -37,12 +38,12 @@ function shuffleAll() {
       <Pause v-if="isThisPlaying && player.playing" class="size-6 fill-current" />
       <Play v-else class="size-6 translate-x-[1px] fill-current" />
     </button>
-    <button class="liquid icon-btn size-12 text-fg" :disabled="!tracks.length" :aria-label="t('player.shuffle')" @click="shuffleAll">
+    <button class="liquid icon-btn size-11 text-fg sm:size-12" :disabled="!tracks.length" :aria-label="t('player.shuffle')" @click="shuffleAll">
       <Shuffle class="size-6" />
     </button>
     <button
       v-if="downloadable && remote.length"
-      class="liquid icon-btn size-12 text-fg"
+      class="liquid icon-btn size-11 text-fg sm:size-12"
       :class="{ '!text-accent': downloaded === remote.length }"
       :aria-label="t('menu.download')"
       :title="t('collection.downloaded', { n: downloaded, total: remote.length })"
@@ -52,7 +53,7 @@ function shuffleAll() {
       <CheckCircle2 v-else-if="downloaded === remote.length" class="size-6" />
       <ArrowDownToLine v-else class="size-6" />
     </button>
-    <span v-if="downloadable && downloaded && downloaded < remote.length" class="text-xs text-subtle tabular">{{ num(downloaded) }}/{{ num(remote.length) }}</span>
-    <div class="ms-auto flex items-center gap-2"><slot /></div>
+    <span v-if="downloadable && downloaded && downloaded < remote.length" class="hidden text-xs text-subtle tabular min-[400px]:inline">{{ num(downloaded) }}/{{ num(remote.length) }}</span>
+    <div class="ms-auto flex min-w-0 items-center gap-0.5 sm:gap-2 [&>.icon-btn]:size-9 sm:[&>.icon-btn]:size-10"><slot /></div>
   </div>
 </template>

@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import Draggable from 'vuedraggable'
 import CollectionActions from '@/components/CollectionActions.vue'
 import CollectionHeader from '@/components/CollectionHeader.vue'
+import AutoDownloadToggle from '@/components/AutoDownloadToggle.vue'
 import Avatar from '@/components/Avatar.vue'
 import CollaboratorsDialog from '@/components/CollaboratorsDialog.vue'
 import CoverMosaic from '@/components/CoverMosaic.vue'
@@ -167,12 +168,6 @@ async function finishReorder() {
         <button class="icon-btn" :title="t('common.edit')" @click="openEdit"><Pencil class="size-5" /></button>
       </template>
       <button v-else-if="canEdit" class="icon-btn" :title="t('collab.leave')" @click="leave"><LogOut class="size-5 rtl:rotate-180" /></button>
-      <!-- Keep this playlist downloaded on this device: now, and whenever songs are added to it. -->
-      <label class="flex cursor-pointer items-center gap-2 text-sm text-muted" :title="t('playlist.autoDownloadHint')">
-        <span class="hidden sm:inline">{{ t('playlist.autoDownload') }}</span>
-        <span class="sm:hidden">{{ t('settings.autoDownloadShort') }}</span>
-        <input type="checkbox" class="size-4 accent-[var(--accent)]" :checked="deviceSync.isAutoPlaylist(id)" @change="deviceSync.toggleAutoPlaylist(id)" />
-      </label>
       <button v-if="tracks.length" class="icon-btn" :title="t('track.more')" @click="ui.openTrackMenu(tracks, $event)"><MoreHorizontal class="size-5" /></button>
     </CollectionActions>
 
@@ -180,7 +175,11 @@ async function finishReorder() {
       <RouterLink to="/search" class="btn-primary">{{ t('nav.search') }}</RouterLink>
     </EmptyState>
 
-    <div v-if="tracks.length > 1 && !reordering" class="px-4 pb-2 sm:px-6"><SortSelect v-model="sort" :natural-label="t('sort.playlistOrder')" /></div>
+    <!-- Sort, and keeping this playlist downloaded (now and whenever songs are added), on their own row. -->
+    <div v-if="tracks.length && !reordering" class="flex flex-wrap items-center gap-2 px-4 pb-2 sm:px-6">
+      <SortSelect v-if="tracks.length > 1" v-model="sort" :natural-label="t('sort.playlistOrder')" />
+      <AutoDownloadToggle :model-value="deviceSync.isAutoPlaylist(id)" :hint="t('playlist.autoDownloadHint')" @update:model-value="deviceSync.toggleAutoPlaylist(id)" />
+    </div>
     <div v-if="reordering" class="px-2 sm:px-4">
       <Draggable v-model="order" item-key="entry_id" handle=".drag" :animation="180" ghost-class="opacity-30">
         <template #item="{ element }: { element: RemoteTrack }">

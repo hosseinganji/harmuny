@@ -2,6 +2,7 @@
 import { Heart } from 'lucide-vue-next'
 import { computed } from 'vue'
 import CollectionActions from '@/components/CollectionActions.vue'
+import AutoDownloadToggle from '@/components/AutoDownloadToggle.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import SortSelect from '@/components/SortSelect.vue'
 import TrackList from '@/components/TrackList.vue'
@@ -29,20 +30,16 @@ const tracks = computed(() => sortTracks(library.likedTracks, sort.value, librar
       </p>
     </div>
   </header>
-  <CollectionActions :tracks="tracks" :context="{ type: 'liked', name: t('library.liked') }">
-    <label class="flex cursor-pointer items-center gap-2 text-sm text-muted">
-      <span class="hidden sm:inline">{{ t('settings.autoDownloadLiked') }}</span>
-      <span class="sm:hidden">{{ t('settings.autoDownloadShort') }}</span>
-      <input
-        type="checkbox"
-        class="size-4 accent-[var(--accent)]"
-        :checked="settings.prefs.autoDownloadLiked"
-        @change="settings.update({ autoDownloadLiked: ($event.target as HTMLInputElement).checked })"
-      />
-    </label>
-  </CollectionActions>
+  <CollectionActions :tracks="tracks" :context="{ type: 'liked', name: t('library.liked') }" />
   <EmptyState v-if="!library.likedTracks.length" :icon="Heart" :title="t('library.noLiked')" :text="t('library.noLikedHint')" />
-  <div v-if="tracks.length > 1" class="px-4 pb-2 sm:px-6"><SortSelect v-model="sort" :natural-label="t('sort.dateLiked')" /></div>
+  <div class="flex flex-wrap items-center gap-2 px-4 pb-2 sm:px-6">
+    <SortSelect v-if="tracks.length > 1" v-model="sort" :natural-label="t('sort.dateLiked')" />
+    <AutoDownloadToggle
+      :model-value="!!settings.prefs.autoDownloadLiked"
+      :hint="t('settings.autoDownloadHint')"
+      @update:model-value="settings.update({ autoDownloadLiked: $event })"
+    />
+  </div>
   <div class="px-2 sm:px-4">
     <TrackList :tracks="tracks" show-album :context="{ type: 'liked', name: t('library.liked') }" />
   </div>
