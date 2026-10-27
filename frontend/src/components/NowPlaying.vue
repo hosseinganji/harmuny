@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { useLikePop } from '@/lib/motion'
-import { ChevronDown, Download, Heart, ListMusic, MicVocal, MoreHorizontal } from 'lucide-vue-next'
+import { ChevronDown, Download, Heart, ListMusic, Loader2, MicVocal, MoreHorizontal, UsersRound } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { duration } from '@/lib/format'
 import { t } from '@/lib/i18n'
 import { useDownloads } from '@/stores/downloads'
+import { useJam } from '@/stores/jam'
 import { useLibrary } from '@/stores/library'
 import { usePlayer } from '@/stores/player'
 import { useUi } from '@/stores/ui'
+import JamReactionBar from './JamReactionBar.vue'
 import LyricsView from './LyricsView.vue'
 import PlaybackOptions from './PlaybackOptions.vue'
 import PlayerControls from './PlayerControls.vue'
@@ -20,6 +23,25 @@ const player = usePlayer()
 const library = useLibrary()
 const downloads = useDownloads()
 const ui = useUi()
+const jam = useJam()
+const router = useRouter()
+
+/** The Jam button: open the Jam, or start one with what is playing now. */
+const startingJam = ref(false)
+async function openJam() {
+  if (!jam.active) {
+    startingJam.value = true
+    try {
+      await jam.start()
+    } catch {
+      return ui.toast(t('jam.startFailed'), 'error')
+    } finally {
+      startingJam.value = false
+    }
+  }
+  ui.nowPlayingOpen = false
+  router.push('/jam')
+}
 
 const tab = ref<'art' | 'lyrics' | 'queue'>('art')
 const desktopTab = ref<'lyrics' | 'queue'>('lyrics')
@@ -90,10 +112,28 @@ const likePop = useLikePop(() => !!player.track && library.isLiked(player.track)
           <button class="icon-btn text-fg" :aria-label="t('common.close')" @click="ui.nowPlayingOpen = false">
             <ChevronDown class="size-7" />
           </button>
-          <div class="min-w-0 flex-1 text-center">
+          <button v-if="jam.active" class="min-w-0 flex-1 text-center" @click="openJam">
+            <div class="flex items-center justify-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-accent">
+              <span class="size-1.5 animate-pulse rounded-full bg-accent" />{{ t('jam.title') }} · {{ t('jam.listeners', { n: jam.members.filter((m) => m.online).length || 1 }) }}
+            </div>
+            <div class="truncate text-sm font-bold">{{ t('jam.hostJam', { name: jam.host?.name ?? '' }) }}</div>
+          </button>
+          <div v-else class="min-w-0 flex-1 text-center">
             <div class="text-[11px] font-semibold uppercase tracking-widest text-muted">{{ player.context?.name ? t('queue.playingFrom') : t('player.nowPlaying') }}</div>
             <div class="truncate text-sm font-bold">{{ player.context?.name }}</div>
           </div>
+          <!-- Listen together: start a Jam with this song, or open the one going on. -->
+          <button
+            class="icon-btn text-fg"
+            :class="{ '!bg-accent !text-white': jam.active }"
+            :aria-label="jam.active ? t('jam.open') : t('jam.start')"
+            :title="jam.active ? t('jam.open') : t('jam.start')"
+            :disabled="startingJam"
+            @click="openJam"
+          >
+            <Loader2 v-if="startingJam" class="size-5 animate-spin" />
+            <UsersRound v-else class="size-5.5" />
+          </button>
           <button class="icon-btn text-fg" :aria-label="t('track.more')" @click="more">
             <MoreHorizontal class="size-6" />
           </button>
@@ -167,6 +207,8 @@ const likePop = useLikePop(() => !!player.track && library.isLiked(player.track)
               </div>
 
               <PlayerControls large />
+
+              <JamReactionBar v-if="jam.active" compact />
 
               <div class="flex items-center justify-between">
                 <button class="icon-btn size-11 lg:hidden" :class="{ '!text-accent': tab === 'lyrics' }" :aria-label="t('player.lyrics')" @click="tab = tab === 'lyrics' ? 'art' : 'lyrics'">

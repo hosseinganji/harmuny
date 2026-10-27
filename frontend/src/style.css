@@ -270,6 +270,27 @@ input[type='range'].range {
   animation: heart-pop 0.4s var(--ease-spring);
 }
 
+/* Jam reactions float up the screen, swaying a little (one transform and opacity each: cheap). */
+@keyframes jam-float {
+  0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
+  12% { transform: translate(-50%, -5vh) scale(1.15); opacity: 1; }
+  45% { transform: translate(calc(-50% + var(--sway, 0px)), -24vh) scale(1); opacity: 1; }
+  100% { transform: translate(calc(-50% - var(--sway, 0px)), -52vh) scale(0.85); opacity: 0; }
+}
+.jam-float {
+  animation: jam-float 3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* A soft glow breathing behind the Jam artwork. */
+@keyframes jam-halo {
+  0%, 100% { transform: scale(0.92); opacity: 0.55; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+}
+.jam-halo {
+  background: radial-gradient(closest-side, rgb(var(--dyn) / 0.75), transparent);
+  animation: jam-halo 4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

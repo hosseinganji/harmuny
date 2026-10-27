@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Admin\TrackAdminController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\HistoryController;
+use App\Http\Controllers\Api\JamController;
 use App\Http\Controllers\Api\LikeController;
 use App\Http\Controllers\Api\LyricsController;
 use App\Http\Controllers\Api\MediaController;
@@ -26,6 +27,8 @@ Route::middleware('throttle:20,1')->group(function () {
 });
 
 Route::get('avatars/{user}', [ProfileController::class, 'avatar']);
+// Jams line their clocks up with this one; it answers without signing in, to be as quick as possible.
+Route::get('jams/clock', [JamController::class, 'clock']);
 
 // Media URLs authenticate with a bearer token or a ?k= media key.
 Route::middleware('media')->group(function () {
@@ -62,6 +65,23 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('radio', [RadioController::class, 'radio']);
     Route::get('mixes/daily', [RadioController::class, 'dailyMix']);
     Route::post('smart-shuffle', [RadioController::class, 'smartShuffle']);
+
+    // Jams: listening together.
+    Route::get('jams/current', [JamController::class, 'current']);
+    Route::post('jams', [JamController::class, 'start']);
+    Route::get('jams/{jam}', [JamController::class, 'show']);
+    Route::patch('jams/{jam}', [JamController::class, 'update']);
+    Route::delete('jams/{jam}', [JamController::class, 'end']);
+    Route::post('jams/{jam}/join', [JamController::class, 'join']);
+    Route::post('jams/{jam}/leave', [JamController::class, 'leave']);
+    Route::post('jams/{jam}/ping', [JamController::class, 'ping']);
+    Route::post('jams/{jam}/playback', [JamController::class, 'playback']);
+    Route::post('jams/{jam}/queue', [JamController::class, 'add']);
+    Route::put('jams/{jam}/queue', [JamController::class, 'reorder']);
+    Route::delete('jams/{jam}/queue/{uid}', [JamController::class, 'remove']);
+    Route::post('jams/{jam}/react', [JamController::class, 'react'])->middleware('throttle:90,1');
+    Route::post('jams/{jam}/invite', [JamController::class, 'invite'])->middleware('throttle:20,1');
+    Route::delete('jams/{jam}/members/{user}', [JamController::class, 'kick']);
 
     Route::get('likes', [LikeController::class, 'index']);
     Route::post('tracks/{track}/like', [LikeController::class, 'store']);

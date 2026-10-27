@@ -7,6 +7,7 @@ use App\Http\Resources\TrackResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Who has the app open right now, and what they are listening to. Calling it also counts as a
@@ -26,6 +27,14 @@ class OnlineController extends Controller
             ->orderByDesc('last_seen_at')
             ->get();
         $fresh = now()->subSeconds(self::WINDOW_SECONDS);
+        // Who is in a Jam, so the list can offer to join it.
+        $jams = DB::table('jam_members')
+            ->join('jams', 'jams.id', '=', 'jam_members.jam_id')
+            ->join('users as hosts', 'hosts.id', '=', 'jams.host_id')
+            ->whereNull('jams.ended_at')
+            ->whereIn('jam_members.user_id', $users->pluck('id'))
+            ->get(['jam_members.user_id', 'jams.code', 'jams.host_id', 'hosts.name as host_name'])
+            ->keyBy('user_id');
 
         return response()->json([
             'data' => $users->map(fn (User $user) => [
@@ -34,6 +43,11 @@ class OnlineController extends Controller
                 'username' => $user->username,
                 'avatar_url' => $user->avatarUrl(),
                 'is_me' => $user->is($request->user()),
+                'jam' => isset($jams[$user->id]) ? [
+                    'code' => $jams[$user->id]->code,
+                    'host_name' => $jams[$user->id]->host_name,
+                    'is_host' => $jams[$user->id]->host_id === $user->id,
+                ] : null,
                 'now_playing' => $user->nowPlaying && $user->now_playing_at?->gte($fresh)
                     ? (new TrackResource($user->nowPlaying))->resolve($request)
                     : null,

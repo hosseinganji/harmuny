@@ -24,6 +24,8 @@ const router = createRouter({
     },
     { path: '/playlist/:id', name: 'playlist', component: () => import('@/views/PlaylistView.vue'), props: (r) => ({ id: Number(r.params.id) }) },
     { path: '/artist', name: 'artist', component: () => import('@/views/ArtistView.vue'), props: (r) => ({ name: String(r.query.name ?? '') }) },
+    { path: '/jam', name: 'jam', component: () => import('@/views/JamView.vue') },
+    { path: '/jam/:code', name: 'jam-invite', component: () => import('@/views/JamView.vue'), props: true },
     { path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue') },
     { path: '/settings', name: 'settings', component: () => import('@/views/SettingsView.vue') },
     { path: '/settings/equalizer', name: 'equalizer', component: () => import('@/views/EqualizerView.vue') },

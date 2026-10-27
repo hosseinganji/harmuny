@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { Loader2, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Sparkles } from 'lucide-vue-next'
 import { t } from '@/lib/i18n'
+import { useJam } from '@/stores/jam'
 import { usePlayer } from '@/stores/player'
 
 withDefaults(defineProps<{ large?: boolean }>(), { large: false })
 const player = usePlayer()
+const jam = useJam()
 </script>
 
 <template>
@@ -41,10 +43,21 @@ const player = usePlayer()
       <Pause v-else-if="player.playing" class="fill-current" :class="large ? 'size-8' : 'size-5'" />
       <Play v-else class="translate-x-[1px] fill-current" :class="large ? 'size-8' : 'size-5'" />
     </button>
-    <button class="icon-btn text-fg" :class="large ? 'size-12 min-[400px]:size-14' : 'size-9'" :aria-label="t('player.next')" @click="player.next()">
-      <SkipForward class="fill-current" :class="large ? 'size-8' : 'size-5'" />
-    </button>
     <button
+      class="icon-btn relative text-fg"
+      :class="large ? 'size-12 min-[400px]:size-14' : 'size-9'"
+      :aria-label="jam.active && !jam.canControl ? t('jam.voteSkip') : t('player.next')"
+      @click="player.next()"
+    >
+      <SkipForward class="fill-current" :class="large ? 'size-8' : 'size-5'" />
+      <!-- A Jam guest's "next" is a vote: how many want to skip. -->
+      <span v-if="jam.active && jam.state?.skip_votes" class="absolute -top-1 end-0 rounded-full bg-accent px-1 text-[9px] font-bold leading-4 text-white tabular">
+        {{ jam.state.skip_votes.users.length }}/{{ jam.state.skip_votes.needed }}
+      </span>
+    </button>
+    <span v-if="jam.active" class="shrink-0" :class="large ? 'size-11 min-[400px]:size-12' : 'size-9'" />
+    <button
+      v-else
       class="icon-btn relative"
       :class="[large ? 'size-11 min-[400px]:size-12' : 'size-9', player.repeat !== 'off' ? '!text-accent' : '']"
       :aria-label="t('player.repeat.' + player.repeat)"

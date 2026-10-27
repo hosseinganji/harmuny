@@ -17,6 +17,7 @@ const nav = computed(() => [
   { to: '/', icon: Home, label: t('nav.home'), exact: true },
   { to: '/search', icon: Search, label: t('nav.search') },
   { to: '/library', icon: Library, label: t('nav.library') },
+  { to: '/jam', icon: UsersRound, label: t('jam.title') },
 ])
 const collections = computed(() => [
   { to: '/library/liked', icon: Heart, label: t('library.liked') },

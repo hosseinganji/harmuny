@@ -204,7 +204,8 @@ class RadioService
             }
         }
         if ($taste->isEmpty()) {
-            return Track::query()->whereNotIn('id', $exclude)->where('play_count', '>', 0)->orderByDesc('play_count')->limit($limit * 2)->get()->shuffle()->take($limit)->values();
+            // Nothing to go on yet: what is popular (any song, on a library nobody has played yet).
+            return Track::query()->whereNotIn('id', $exclude)->orderByDesc('play_count')->limit($limit * 3)->get()->shuffle()->take($limit)->values();
         }
 
         $recent = Play::query()->where('user_id', $user->id)->where('played_at', '>=', now()->subDays(3))->pluck('track_id')->all();
@@ -217,6 +218,32 @@ class RadioService
             ->pluck('track');
 
         return $this->spreadArtists($scored)->take($limit)->values();
+    }
+
+    /**
+     * A mix for several people (a Jam): each member's Smart Shuffle picks, taking turns, so the music
+     * belongs to everyone in the room.
+     *
+     * @param  iterable<User>  $users
+     * @param  int[]  $exclude  songs already in the queue
+     * @return Collection<int, Track>
+     */
+    public function blend(iterable $users, array $exclude = [], int $limit = 6): Collection
+    {
+        $lists = collect($users)->map(fn (User $user) => $this->forYou($user, $exclude, $limit)->values());
+        $seen = [];
+        $mix = collect();
+        for ($i = 0; $i < $limit && $mix->count() < $limit; $i++) {
+            foreach ($lists as $list) {
+                $track = $list[$i] ?? null;
+                if ($track && ! isset($seen[$track->id])) {
+                    $seen[$track->id] = true;
+                    $mix->push($track);
+                }
+            }
+        }
+
+        return $this->spreadArtists($mix)->take($limit)->values();
     }
 
     /** A repeatable shuffle: the same seed always gives the same order. */

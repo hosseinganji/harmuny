@@ -79,8 +79,9 @@ function setSleep(v: number | 'track' | null) {
           <button
             v-for="r in rates"
             :key="r"
-            class="chip h-8 flex-1 justify-center px-0 text-xs"
+            class="chip h-8 flex-1 justify-center px-0 text-xs disabled:opacity-40"
             :class="{ 'chip-active': player.rate === r }"
+            :disabled="player.inJam"
             @click="player.setRate(r)"
           >
             <Check v-if="player.rate === r" class="size-3" />{{ num(r) }}×
