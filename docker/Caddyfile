@@ -20,6 +20,8 @@
 	# Updates are private: a device needs a token for its Jam's topic, which the API hands to members.
 	handle /.well-known/mercure* {
 		mercure {
+			# Plain HS256 keys (no issuer/audience in the tokens), as in protocol version 8.
+			protocol_version_compatibility 8
 			publisher_jwt {env.MERCURE_PUBLISHER_JWT_KEY}
 			subscriber_jwt {env.MERCURE_SUBSCRIBER_JWT_KEY}
 			# The Android app runs on its own origin; tokens travel in the URL, so no cookies are involved.
