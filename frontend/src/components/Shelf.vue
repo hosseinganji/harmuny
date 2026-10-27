@@ -27,7 +27,7 @@ function scroll(dir: 1 | -1) {
         <button class="icon-btn size-8 bg-fg/5" @click="scroll(1)"><ChevronRight class="size-4" /></button>
       </div>
     </div>
-    <div ref="row" class="stagger flex snap-x gap-3 overflow-x-auto px-4 pb-2 scrollbar-none sm:gap-4 sm:px-6">
+    <div ref="row" class="flex snap-x gap-3 overflow-x-auto px-4 pb-2 scrollbar-none sm:gap-4 sm:px-6">
       <slot />
     </div>
   </section>

@@ -61,6 +61,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('search', SearchController::class);
     Route::get('radio', [RadioController::class, 'radio']);
     Route::get('mixes/daily', [RadioController::class, 'dailyMix']);
+    Route::post('smart-shuffle', [RadioController::class, 'smartShuffle']);
 
     Route::get('likes', [LikeController::class, 'index']);
     Route::post('tracks/{track}/like', [LikeController::class, 'store']);

@@ -160,6 +160,65 @@ class RadioService
         return $this->spreadArtists($this->shuffled($mix, $seed(6)))->take($limit)->values();
     }
 
+    /**
+     * Songs this member will probably like, for Smart Shuffle: by the artists of the songs they liked and the
+     * artists they play most (90 days), plus artists related to those, never ones already in the queue or
+     * played in the last few days.
+     *
+     * @param  int[]  $exclude  songs already in the queue
+     * @return Collection<int, Track>
+     */
+    public function forYou(User $user, array $exclude = [], int $limit = 20): Collection
+    {
+        $likedArtists = Track::query()
+            ->join('track_likes', 'track_likes.track_id', '=', 'tracks.id')
+            ->where('track_likes.user_id', $user->id)
+            ->whereNotNull('tracks.artist')
+            ->groupBy('tracks.artist')
+            ->selectRaw('tracks.artist as artist, COUNT(*) as c')
+            ->pluck('c', 'artist');
+        $playedArtists = Play::query()
+            ->join('tracks', 'tracks.id', '=', 'plays.track_id')
+            ->where('plays.user_id', $user->id)
+            ->where('plays.played_at', '>=', now()->subDays(90))
+            ->whereNotNull('tracks.artist')
+            ->groupBy('tracks.artist')
+            ->selectRaw('tracks.artist as artist, COUNT(*) as c')
+            ->orderByDesc('c')
+            ->limit(15)
+            ->pluck('c', 'artist');
+
+        // Taste: liked artists count double; then a share for artists related to the top ones.
+        $taste = collect();
+        foreach ($likedArtists as $artist => $n) {
+            $taste[$artist] = ($taste[$artist] ?? 0) + 2 * $n;
+        }
+        foreach ($playedArtists as $artist => $n) {
+            $taste[$artist] = ($taste[$artist] ?? 0) + $n;
+        }
+        $max = max(1, (float) $taste->max());
+        $taste = $taste->map(fn ($w) => $w / $max)->sortDesc();
+        foreach ($taste->keys()->take(3) as $artist) {
+            foreach ($this->relatedArtists($artist, 8) as $related => $w) {
+                $taste[$related] = max($taste[$related] ?? 0, 0.6 * $w);
+            }
+        }
+        if ($taste->isEmpty()) {
+            return Track::query()->whereNotIn('id', $exclude)->where('play_count', '>', 0)->orderByDesc('play_count')->limit($limit * 2)->get()->shuffle()->take($limit)->values();
+        }
+
+        $recent = Play::query()->where('user_id', $user->id)->where('played_at', '>=', now()->subDays(3))->pluck('track_id')->all();
+        $scored = Track::query()
+            ->whereIn('artist', $taste->keys())
+            ->whereNotIn('id', array_merge($exclude, $recent))
+            ->get()
+            ->map(fn (Track $t) => ['track' => $t, 'score' => 2 * ($taste[$t->artist] ?? 0) + mt_rand() / mt_getrandmax()])
+            ->sortByDesc('score')
+            ->pluck('track');
+
+        return $this->spreadArtists($scored)->take($limit)->values();
+    }
+
     /** A repeatable shuffle: the same seed always gives the same order. */
     private function shuffled(Collection $items, int $seed): Collection
     {

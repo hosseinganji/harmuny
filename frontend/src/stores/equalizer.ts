@@ -154,8 +154,10 @@ export const useEqualizer = defineStore('equalizer', () => {
   // iPhone suspends Web Audio when the app goes to the background or the screen locks, which made songs
   // play in silence. Before that happens, move playback to a plain element (which iOS keeps playing).
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
+  // Paused too: a song started later from the lock screen, a car or headphones must not go through a
+  // suspended context either.
   document.addEventListener('visibilitychange', () => {
-    if (isIOS && document.visibilityState === 'hidden' && ctx && !usePlayer().getAudio().paused) rescue()
+    if (isIOS && document.visibilityState === 'hidden' && ctx) rescue()
   })
 
   /** Glide a parameter to its new value (no zipper noise, no piled-up automation). */

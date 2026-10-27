@@ -36,4 +36,17 @@ class RadioController extends Controller
     {
         return response()->json(['data' => TrackResource::collection($radio->dailyMix($request->user()))->resolve($request)]);
     }
+
+    /** Smart Shuffle: songs this member will likely enjoy, to mix into a shuffled queue. */
+    public function smartShuffle(Request $request, RadioService $radio): JsonResponse
+    {
+        $data = $request->validate([
+            'exclude' => ['array', 'max:5000'],
+            'exclude.*' => ['integer'],
+            'limit' => ['integer', 'min:1', 'max:100'],
+        ]);
+        $tracks = $radio->forYou($request->user(), $data['exclude'] ?? [], $data['limit'] ?? 20);
+
+        return response()->json(['data' => TrackResource::collection($tracks)->resolve($request)]);
+    }
 }
