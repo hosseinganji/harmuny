@@ -19,7 +19,6 @@ import Toasts from '@/components/Toasts.vue'
 import TrackMenu from '@/components/TrackMenu.vue'
 import { setUnauthorizedHandler } from '@/lib/api'
 import { setPlayerArtwork } from '@/lib/dynamicColor'
-import { viewTransitions } from '@/lib/motion'
 import { startPresence } from '@/lib/presence'
 import { keepRadioGoing } from '@/lib/radio'
 import { t } from '@/lib/i18n'
@@ -126,15 +125,11 @@ function pageKey(r: RouteLocationNormalizedLoaded) {
       <MobileTopBar v-if="route.name === 'home'" :safe="online" />
       <div class="flex min-h-0 flex-1">
         <AppSidebar @new-playlist="newPlaylist = true" />
-        <main data-scroll class="vt-page relative min-w-0 flex-1 overflow-y-auto overflow-x-hidden lg:card lg:my-2" :class="online ? (route.name === 'home' ? 'lg:pt-safe' : 'pt-safe') : ''">
+        <main data-scroll class="relative min-w-0 flex-1 overflow-y-auto overflow-x-hidden lg:card lg:my-2" :class="online ? (route.name === 'home' ? 'lg:pt-safe' : 'pt-safe') : ''">
           <RouterView v-slot="{ Component, route: r }">
-            <!-- With view transitions the browser animates the swap (see lib/motion.ts); otherwise a quick fade-in. -->
             <!-- Views have several root nodes; a single keyed wrapper keeps the swap reliable. -->
             <!-- Search keeps its query in the URL; remounting on every keystroke would close the keyboard. -->
-            <div v-if="viewTransitions" :key="pageKey(r)"><component :is="Component" /></div>
-            <Transition v-else name="page" mode="out-in">
-              <div :key="pageKey(r)"><component :is="Component" /></div>
-            </Transition>
+            <div :key="pageKey(r)"><component :is="Component" /></div>
           </RouterView>
           <div class="h-40 lg:h-8" />
         </main>

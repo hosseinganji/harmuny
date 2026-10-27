@@ -105,17 +105,13 @@ const likePop = useLikePop(() => !!player.track && library.isLiked(player.track)
             <!-- A size container: the artwork is the largest square that fits, so it can never spill onto the title. -->
             <div class="relative my-4 flex min-h-0 flex-1 items-center justify-center [container-type:size]" @touchstart.passive="tab === 'art' && touchStart($event)" @touchmove.passive="tab === 'art' && touchMove($event)" @touchend="tab === 'art' && touchEnd()">
               <div v-if="tab === 'art'" class="size-[min(100cqw,100cqh)] lg:max-h-112 lg:max-w-112">
-                <!-- Artwork eases into the next song; it also breathes in and out with play/pause. -->
-                <Transition name="art" mode="out-in">
-                  <TrackCover
-                    :key="player.current?.uid"
-                    :track="player.track"
-                    size="fill"
-                    rounded="rounded-3xl"
-                    class="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] transition-transform duration-700 ease-[var(--ease-spring)]"
-                    :class="player.playing ? 'scale-100' : 'scale-[0.92]'"
-                  />
-                </Transition>
+                <TrackCover
+                  :track="player.track"
+                  size="fill"
+                  rounded="rounded-3xl"
+                  class="shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] transition-transform duration-300"
+                  :class="player.playing ? 'scale-100' : 'scale-[0.94]'"
+                />
               </div>
               <LyricsView v-else-if="tab === 'lyrics'" big class="absolute inset-0" />
               <div v-else class="absolute inset-0 overflow-y-auto">

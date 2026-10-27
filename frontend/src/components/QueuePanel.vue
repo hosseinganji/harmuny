@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { GripVertical, ListX, X } from 'lucide-vue-next'
+import { GripVertical, ListX, Sparkles, X } from 'lucide-vue-next'
 import { computed } from 'vue'
 import Draggable from 'vuedraggable'
 import { duration, num } from '@/lib/format'
@@ -59,7 +59,10 @@ const upcoming = computed({
           </span>
           <TrackCover :track="element.track" size="sm" />
           <div class="min-w-0 flex-1">
-            <div class="truncate text-sm font-medium">{{ element.track.title }}</div>
+            <div class="flex items-center gap-1 truncate text-sm font-medium">
+              <Sparkles v-if="element.smart" class="size-3.5 shrink-0 fill-current text-accent" :aria-label="t('player.smartPick')" />
+              <span class="truncate">{{ element.track.title }}</span>
+            </div>
             <div class="truncate text-xs text-muted">{{ element.track.artist ?? t('track.unknownArtist') }}</div>
           </div>
           <span v-if="!compact" class="text-xs text-subtle tabular group-hover:hidden">{{ duration(element.track.duration) }}</span>

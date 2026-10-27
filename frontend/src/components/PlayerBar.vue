@@ -19,7 +19,7 @@ const preview = ref<number | null>(null)
 </script>
 
 <template>
-  <footer v-if="player.track" class="vt-playerbar glass relative z-30 hidden h-22 items-center gap-4 border-t border-line px-4 lg:flex">
+  <footer v-if="player.track" class="glass relative z-30 hidden h-22 items-center gap-4 border-t border-line px-4 lg:flex">
     <!-- Now playing -->
     <div class="flex w-[30%] min-w-0 items-center gap-3">
       <button class="group relative" :aria-label="t('player.expand')" @click="ui.nowPlayingOpen = true">

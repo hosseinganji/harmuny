@@ -95,4 +95,35 @@ class RadioTest extends TestCase
 
         $this->assertCount(5, $this->actingAs(User::factory()->create())->getJson('/api/mixes/daily')->assertOk()->json('data'));
     }
+
+    public function test_smart_shuffle_suggests_from_taste_and_skips_the_queue_and_recent_plays(): void
+    {
+        $me = User::factory()->create();
+        $liked = $this->track('Shayea', 'Liked one');
+        $queued = $this->track('Shayea', 'Queued');
+        $recent = $this->track('Shayea', 'Played yesterday');
+        $fresh = collect(range(1, 4))->map(fn ($i) => $this->track('Shayea', "Fresh $i"));
+        collect(range(1, 10))->each(fn ($i) => $this->track("Stranger$i", "S$i"));
+        \DB::table('track_likes')->insert(['user_id' => $me->id, 'track_id' => $liked->id, 'created_at' => now()]);
+        $this->play($me, $recent);
+
+        $ids = array_column($this->actingAs($me)->postJson('/api/smart-shuffle', ['exclude' => [$queued->id], 'limit' => 4])->assertOk()->json('data'), 'id');
+
+        $this->assertNotContains($queued->id, $ids);
+        $this->assertNotContains($recent->id, $ids);
+        $this->assertNotEmpty(array_intersect($fresh->pluck('id')->all(), $ids));
+    }
+
+    public function test_only_admins_can_edit_or_remove_songs(): void
+    {
+        $song = $this->track('Shayea', 'Kerm');
+        $member = User::factory()->create();
+
+        $this->actingAs($member)->patchJson("/api/admin/tracks/{$song->id}", ['title' => 'Changed'])->assertForbidden();
+        $this->actingAs($member)->deleteJson("/api/admin/tracks/{$song->id}")->assertForbidden();
+        $this->actingAs($member)->postJson("/api/admin/tracks/{$song->id}/cover")->assertForbidden();
+        $this->assertSame('Kerm', $song->fresh()->title);
+
+        $this->actingAs(User::factory()->admin()->create())->patchJson("/api/admin/tracks/{$song->id}", ['title' => 'Changed'])->assertOk();
+    }
 }
