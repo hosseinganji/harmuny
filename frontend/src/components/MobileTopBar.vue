@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { useDocumentVisibility, useIntervalFn, useOnline } from '@vueuse/core'
 import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import Avatar from '@/components/Avatar.vue'
 import Modal from '@/components/Modal.vue'
-import { Play } from 'lucide-vue-next'
+import { ChevronRight, Play, UsersRound } from 'lucide-vue-next'
 import PlayingBars from '@/components/PlayingBars.vue'
 import TrackCover from '@/components/TrackCover.vue'
 import { api } from '@/lib/api'
 import { t } from '@/lib/i18n'
 import type { ApiTrack } from '@/lib/types'
 import { useAuth } from '@/stores/auth'
+import { useJam } from '@/stores/jam'
 import { useLibrary } from '@/stores/library'
 import { usePlayer } from '@/stores/player'
 import { useUi } from '@/stores/ui'
@@ -20,6 +22,14 @@ const auth = useAuth()
 const ui = useUi()
 const library = useLibrary()
 const player = usePlayer()
+const jam = useJam()
+const router = useRouter()
+
+/** Open the Jam page: the one this member is in, an invite to a friend's, or the place to start one. */
+function goJam(code?: string) {
+  listOpen.value = false
+  router.push(code && code !== jam.state?.code ? `/jam/${code}` : '/jam')
+}
 
 /** Play what a friend is listening to. */
 function listenAlong(track: ApiTrack) {
@@ -28,7 +38,15 @@ function listenAlong(track: ApiTrack) {
   listOpen.value = false
 }
 
-interface OnlineUser { id: number; name: string; username: string; avatar_url: string | null; is_me: boolean; now_playing: ApiTrack | null }
+interface OnlineUser {
+  id: number
+  name: string
+  username: string
+  avatar_url: string | null
+  is_me: boolean
+  now_playing: ApiTrack | null
+  jam: { code: string; host_name: string; is_host: boolean } | null
+}
 const online = ref<OnlineUser[]>([])
 const listOpen = ref(false)
 const visible = useDocumentVisibility()
@@ -71,6 +89,18 @@ watch(visible, (v) => v === 'visible' && refresh())
   </div>
 
   <Modal :open="listOpen" :title="t('online.title')" @close="listOpen = false">
+    <!-- Listen together -->
+    <button
+      class="mb-3 flex w-full items-center gap-3 rounded-2xl bg-gradient-to-br from-accent/90 to-fuchsia-600/90 p-3 text-start text-white shadow-[0_12px_30px_-12px_var(--accent)] transition active:scale-[0.98]"
+      @click="goJam()"
+    >
+      <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/20"><UsersRound class="size-6" /></span>
+      <span class="min-w-0 flex-1">
+        <span class="block font-bold">{{ jam.active ? t('jam.open') : t('jam.start') }}</span>
+        <span class="block truncate text-sm text-white/80">{{ jam.active ? t('jam.hostJam', { name: jam.host?.name ?? '' }) : t('jam.tagline') }}</span>
+      </span>
+      <ChevronRight class="size-5 rtl:rotate-180" />
+    </button>
     <ul class="space-y-1">
       <li v-for="u in online" :key="u.id" class="flex items-center gap-3 rounded-2xl p-2">
         <span class="relative">
@@ -79,10 +109,19 @@ watch(visible, (v) => v === 'visible' && refresh())
         </span>
         <span class="min-w-0 flex-1">
           <span class="block truncate font-semibold">{{ u.name }}<span v-if="u.is_me" class="ms-1 text-xs font-normal text-muted">({{ t('online.you') }})</span></span>
-          <span v-if="!u.now_playing" class="block truncate text-sm text-muted" dir="ltr">@{{ u.username }}</span>
+          <span v-if="!u.now_playing && !u.jam" class="block truncate text-sm text-muted" dir="ltr">@{{ u.username }}</span>
+          <!-- In a Jam: join them. -->
+          <button
+            v-if="u.jam"
+            class="mt-1 flex items-center gap-1.5 rounded-full bg-accent/15 py-1 pe-3 ps-2 text-xs font-bold text-accent transition active:scale-95"
+            @click="goJam(u.jam.code)"
+          >
+            <UsersRound class="size-3.5" />{{ t('jam.inJam', { name: u.jam.host_name }) }}
+            <span v-if="u.jam.code !== jam.state?.code" class="ms-1 rounded-full bg-accent px-2 py-0.5 text-white">{{ t('jam.join') }}</span>
+          </button>
           <!-- What they are listening to; tap to listen along. -->
           <button
-            v-else
+            v-else-if="u.now_playing && !u.jam"
             class="mt-1 flex w-full items-center gap-2 rounded-xl bg-fg/[0.06] p-1.5 pe-2 text-start transition hover:bg-fg/10 active:scale-[0.98]"
             :disabled="u.is_me"
             @click="listenAlong(u.now_playing)"

@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\JamService;
 use App\Services\Telegram\BotUpdates;
 use App\Services\Telegram\TelegramMode;
 use Illuminate\Support\Facades\Schedule;
@@ -24,3 +25,6 @@ Schedule::command('music:prune-cache')->hourly();
 // Keep a full copy of the library on this server: every 10 minutes, if Telegram is reachable,
 // queue downloads for songs that are not stored yet.
 Schedule::command('music:prefetch')->everyTenMinutes()->withoutOverlapping();
+
+// Jams whose members all closed the app: drop members away for long, and end Jams nobody is left in.
+Schedule::call(fn () => app(JamService::class)->tidyAll())->name('jams-tidy')->everyFiveMinutes()->withoutOverlapping();

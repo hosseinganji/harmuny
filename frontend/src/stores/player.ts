@@ -14,10 +14,25 @@ export interface QueueItem {
   track: Track
   /** Added by Smart Shuffle (a song picked from the listener's taste). */
   smart?: boolean
+  /** In a Jam: who added it (null: the Jam mix). */
+  by?: number | null
+}
+
+/**
+ * While in a Jam (stores/jam.ts) the shared session decides what the controls do. Each hook returns true
+ * to let this device go ahead as usual (the Jam passes the change on to everyone), false when the Jam took
+ * care of it instead (a vote to skip, a song added to the shared queue, no permission…).
+ */
+export interface JamHooks {
+  control(action: 'play' | 'pause' | 'next' | 'prev' | 'seek' | 'jump', arg?: number | string): boolean
+  /** This device finished a song and moved on to the next one by itself. */
+  advanced(fromUid: string): void
+  add(tracks: Track[], mode: 'end' | 'next' | 'play'): void
+  edit(action: 'remove' | 'reorder' | 'clear' | 'shuffle', arg?: string | string[]): boolean
 }
 
 export interface PlayContext {
-  type: 'playlist' | 'artist' | 'liked' | 'downloads' | 'local' | 'search' | 'library' | 'home' | 'history' | 'radio' | 'mix'
+  type: 'playlist' | 'artist' | 'liked' | 'downloads' | 'local' | 'search' | 'library' | 'home' | 'history' | 'radio' | 'mix' | 'jam'
   id?: string | number
   name?: string
 }
@@ -91,6 +106,9 @@ export function trackKey(track: Track) {
   return (track.kind === 'remote' ? 'r' : 'l') + track.id
 }
 
+/** A twentieth of a second of silence, to unlock the element from a tap (see unlock()). */
+const SILENCE = 'data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA'
+
 function createAudio(): HTMLAudioElement {
   const el = new Audio()
   el.preload = 'auto'
@@ -136,6 +154,13 @@ export const usePlayer = defineStore('player', () => {
   let lastTick = 0
   let consecutiveErrors = 0
   let restoreTime = 0
+  /** The queue entry whose song the element holds, and that song. */
+  let loadedUid: string | null = null
+  let loadedKey: string | null = null
+  let jamHooks: JamHooks | null = null
+  const inJam = ref(false)
+  /** In a Jam without sound on this device: the song and progress shown are the Jam's. */
+  let remote = false
 
   audio.volume = volume.value
 
@@ -156,6 +181,7 @@ export const usePlayer = defineStore('player', () => {
     if (!item) {
       audio.removeAttribute('src')
       audio.load()
+      loadedUid = null
       playing.value = false
       return
     }
@@ -173,7 +199,10 @@ export const usePlayer = defineStore('player', () => {
       if (objectUrl && objectUrl !== src) URL.revokeObjectURL(objectUrl)
       objectUrl = src.startsWith('blob:') ? src : null
       audio.src = src
-      audio.playbackRate = rate.value
+      loadedUid = item.uid
+      loadedKey = trackKey(item.track)
+      // A Jam keeps everyone at normal speed (it nudges the rate itself to stay in step).
+      audio.playbackRate = jamHooks ? 1 : rate.value
       restoreTime = startAt
       if (autoplay) await play()
     } catch (e) {
@@ -353,16 +382,28 @@ export const usePlayer = defineStore('player', () => {
     return fresh
   }
 
+  /** Play and pause pressed by the listener (in the app, on the lock screen, headphones or in the car). */
+  function resume() {
+    if (jamHooks && !jamHooks.control('play')) return
+    play()
+  }
+
+  function hold() {
+    if (jamHooks && !jamHooks.control('pause')) return
+    pause()
+  }
+
   function toggle() {
     if (!current.value) return
-    if (audio.paused) play()
-    else pause()
+    if (jamHooks ? playing.value : !audio.paused) hold()
+    else resume()
   }
 
   function handleError(message: string, autoAdvance: boolean) {
     useUi().toast(message, 'error')
     consecutiveErrors++
-    if (autoAdvance && consecutiveErrors < Math.min(queue.value.length, 10) && index.value < queue.value.length - 1) {
+    // In a Jam a song this device can't play is not skipped for everyone; the Jam moves on without it.
+    if (!jamHooks && autoAdvance && consecutiveErrors < Math.min(queue.value.length, 10) && index.value < queue.value.length - 1) {
       setTimeout(() => next(true), 400)
     } else {
       playing.value = false
@@ -371,6 +412,10 @@ export const usePlayer = defineStore('player', () => {
 
   function next(auto = false) {
     if (!queue.value.length) return
+    if (!auto && jamHooks && !jamHooks.control('next')) return
+    const from = current.value?.uid
+    // This device reached the end of the song: tell the Jam (the first device to get there moves it on).
+    if (auto && from) jamHooks?.advanced(from)
     if (index.value < queue.value.length - 1) {
       index.value++
     } else if (repeat.value === 'all') {
@@ -386,6 +431,7 @@ export const usePlayer = defineStore('player', () => {
   }
 
   function prev() {
+    if (jamHooks && !jamHooks.control('prev')) return
     if (audio.currentTime > 3 || index.value <= 0) {
       if (index.value <= 0 && repeat.value === 'all' && audio.currentTime <= 3 && queue.value.length > 1) {
         index.value = queue.value.length - 1
@@ -400,6 +446,7 @@ export const usePlayer = defineStore('player', () => {
 
   function seek(time: number) {
     if (!isFinite(time)) return
+    if (jamHooks && !jamHooks.control('seek', time)) return
     audio.currentTime = Math.max(0, Math.min(time, duration.value || time))
     currentTime.value = audio.currentTime
   }
@@ -413,6 +460,8 @@ export const usePlayer = defineStore('player', () => {
   /** Replace the queue and start playing. */
   function playTracks(tracks: Track[], start = 0, options: { shuffle?: boolean; context?: PlayContext } = {}) {
     if (!tracks.length) return
+    // In a Jam the song picked plays for everyone (guests who can't control playback add it).
+    if (jamHooks) return jamHooks.add([tracks[start >= 0 ? Math.min(start, tracks.length - 1) : Math.floor(Math.random() * tracks.length)]], 'play')
     let items = tracks.map(wrap)
     const first = items[Math.min(Math.max(start, 0), items.length - 1)]
     const wantShuffle = options.shuffle ?? shuffle.value
@@ -436,6 +485,7 @@ export const usePlayer = defineStore('player', () => {
   }
 
   function playNext(tracks: Track | Track[]) {
+    if (jamHooks) return jamHooks.add(Array.isArray(tracks) ? tracks : [tracks], 'next')
     const items = (Array.isArray(tracks) ? tracks : [tracks]).map(wrap)
     if (!current.value) return playTracks(items.map((i) => i.track))
     const at = index.value + 1 + nextInsert
@@ -452,6 +502,7 @@ export const usePlayer = defineStore('player', () => {
   }
 
   function addToQueue(tracks: Track | Track[], options: { silent?: boolean } = {}) {
+    if (jamHooks) return jamHooks.add(Array.isArray(tracks) ? tracks : [tracks], 'end')
     const items = (Array.isArray(tracks) ? tracks : [tracks]).map(wrap)
     if (!current.value) return playTracks(items.map((i) => i.track))
     queue.value = [...queue.value, ...items]
@@ -461,6 +512,7 @@ export const usePlayer = defineStore('player', () => {
   }
 
   function remove(uid: string) {
+    if (jamHooks) return void jamHooks.edit('remove', uid)
     const i = queue.value.findIndex((item) => item.uid === uid)
     if (i < 0) return
     const q = [...queue.value]
@@ -477,10 +529,12 @@ export const usePlayer = defineStore('player', () => {
 
   /** Replace the "next up" part of the queue (used by drag-and-drop reordering). */
   function setUpcoming(items: QueueItem[]) {
+    if (jamHooks && !jamHooks.edit('reorder', items.map((i) => i.uid))) return
     queue.value = [...queue.value.slice(0, index.value + 1), ...items]
   }
 
   function clearUpcoming() {
+    if (jamHooks) return void jamHooks.edit('clear')
     queue.value = queue.value.slice(0, index.value + 1)
     if (originalOrder.value) originalOrder.value = queue.value.map((i) => i.uid)
   }
@@ -488,12 +542,14 @@ export const usePlayer = defineStore('player', () => {
   function jump(uid: string) {
     const i = queue.value.findIndex((item) => item.uid === uid)
     if (i < 0) return
+    if (jamHooks && !jamHooks.control('jump', uid)) return
     index.value = i
     load(true)
   }
 
   /** The shuffle button cycles: off → shuffle → smart shuffle → off. */
   function toggleShuffle() {
+    if (jamHooks) return void jamHooks.edit('shuffle')
     const cur = current.value
     if (shuffle.value && !smartShuffle.value) {
       smartShuffle.value = true
@@ -523,6 +579,7 @@ export const usePlayer = defineStore('player', () => {
   }
 
   function cycleRepeat() {
+    if (jamHooks) return
     repeat.value = repeat.value === 'off' ? 'all' : repeat.value === 'all' ? 'one' : 'off'
   }
 
@@ -541,7 +598,7 @@ export const usePlayer = defineStore('player', () => {
 
   function setRate(r: number) {
     rate.value = r
-    audio.playbackRate = r
+    if (!jamHooks) audio.playbackRate = r
   }
 
   function setSleep(minutes: number | 'track' | null) {
@@ -590,7 +647,9 @@ export const usePlayer = defineStore('player', () => {
     const controller = new AbortController()
     const on = (type: string, handler: () => void) => el.addEventListener(type, handler, { signal: controller.signal })
     on('play', () => (playing.value = true))
-    on('pause', () => (playing.value = false))
+    on('pause', () => {
+      if (!remote) playing.value = false
+    })
     on('playing', () => {
       loading.value = false
       consecutiveErrors = 0
@@ -700,8 +759,8 @@ export const usePlayer = defineStore('player', () => {
   function registerMediaHandlers() {
     if (!('mediaSession' in navigator)) return
     const handlers: [MediaSessionAction, MediaSessionActionHandler | null][] = [
-      ['play', () => play()],
-      ['pause', () => pause()],
+      ['play', () => resume()],
+      ['pause', () => hold()],
       ['previoustrack', () => prev()],
       ['nexttrack', () => next()],
       ['seekto', (d) => d.seekTime !== undefined && seek(d.seekTime)],
@@ -748,7 +807,8 @@ export const usePlayer = defineStore('player', () => {
 
   async function restore() {
     const s = await kv.get<any>(STATE_KEY)
-    if (!s?.queue?.length) return
+    // Back in a Jam already: the Jam's queue wins.
+    if (!s?.queue?.length || jamHooks) return
     queue.value = s.queue
     index.value = Math.min(s.index ?? 0, s.queue.length - 1)
     shuffle.value = !!s.shuffle
@@ -778,6 +838,90 @@ export const usePlayer = defineStore('player', () => {
     }
   }
 
+  // ---- Jam ------------------------------------------------------------------------------------------
+
+  function setJamHooks(hooks: JamHooks | null) {
+    jamHooks = hooks
+    inJam.value = !!hooks
+    remote = false
+    if (hooks) {
+      shuffle.value = false
+      smartShuffle.value = false
+      originalOrder.value = null
+      repeat.value = 'off'
+    } else {
+      playing.value = !audio.paused
+      if (context.value?.type === 'jam') context.value = null
+    }
+    audio.playbackRate = hooks ? 1 : rate.value
+  }
+
+  /** Follow the Jam on this device: its queue and song, playing or not, at its position (seconds). */
+  function follow(items: QueueItem[], at: number, shouldPlay: boolean, position: number) {
+    remote = false
+    queue.value = items
+    index.value = at
+    context.value = { type: 'jam', name: t('jam.title') }
+    const item = current.value
+    if (!shouldPlay) {
+      wantPlay = false
+      blocked = false
+    }
+    if (!item) {
+      if (!audio.paused) pause()
+      return
+    }
+    // The same song under a new entry (the host's queue becoming the Jam's): carry on, no reload.
+    if (item.uid !== loadedUid && loadedKey === trackKey(item.track) && audio.src && !audio.error) loadedUid = item.uid
+    if (item.uid !== loadedUid || audio.error || !audio.src) {
+      consecutiveErrors = 0
+      load(shouldPlay, position)
+      return
+    }
+    if (shouldPlay) {
+      if (!audio.paused) return // in step: the Jam fine-tunes the position while it plays
+      if (Math.abs(audio.currentTime - position) > 0.3) audio.currentTime = position
+      play()
+    } else {
+      if (!audio.paused) pause()
+      if (Math.abs(audio.currentTime - position) > 0.5) audio.currentTime = position
+      currentTime.value = audio.currentTime
+    }
+  }
+
+  /**
+   * Called from a tap that will start music only after waiting on the network (joining a Jam): iOS lets
+   * an element play without a tap once it has been played from one, so play it now, silently.
+   */
+  function unlock() {
+    if (!audio.paused) return
+    const el = audio
+    const wasMuted = el.muted
+    if (!el.src) el.src = SILENCE
+    el.muted = true
+    el.play()
+      .then(() => el.pause())
+      .catch(() => {})
+      .finally(() => (el.muted = wasMuted))
+  }
+
+  /** Follow the Jam without sound here (the music plays on the others' devices): show its song and progress. */
+  function showRemote(items: QueueItem[], at: number, isPlaying: boolean, position: number) {
+    if (!remote && !audio.paused) pause()
+    remote = true
+    const before = current.value?.uid
+    queue.value = items
+    index.value = at
+    context.value = { type: 'jam', name: t('jam.title') }
+    playing.value = isPlaying && !!current.value
+    loading.value = false
+    currentTime.value = position
+    if (current.value && current.value.uid !== before) {
+      duration.value = current.value.track.duration || 0
+      updateCover()
+    }
+  }
+
   function reset() {
     pause()
     queue.value = []
@@ -794,8 +938,9 @@ export const usePlayer = defineStore('player', () => {
     swapAudioElement,
     queue, index, current, track, upcoming, history, shuffle, repeat, playing, loading,
     currentTime, duration, buffered, progress, volume, muted, rate, sleep, context, coverSrc,
-    play, pause, toggle, next, prev, seek, seekBy,
+    play: resume, pause: hold, toggle, next, prev, seek, seekBy,
     smartShuffle,
+    inJam, setJamHooks, follow, showRemote, unlock,
     playTracks, playNext, addToQueue, remove, setUpcoming, clearUpcoming, jump,
     toggleShuffle, cycleRepeat, setVolume, toggleMute, setRate, setSleep,
     restore, flushPlays, refreshTrack, reset,

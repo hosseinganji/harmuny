@@ -28,6 +28,12 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'mercure' => [
+        // Signs the tokens devices use to receive their Jam's live updates. The container derives it from
+        // APP_KEY when it is not set (docker/entrypoint.sh), so the hub and Laravel always agree.
+        'subscriber_key' => env('MERCURE_SUBSCRIBER_JWT_KEY'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

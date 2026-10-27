@@ -12,7 +12,20 @@
 	@www header_regexp www Host ^www\.(.+)$
 	redir @www https://{re.www.1}{uri} permanent
 
-	encode zstd gzip
+	# Live updates (Server-Sent Events) are streamed as they are, never held back for compression.
+	@compressible not path /.well-known/mercure*
+	encode @compressible zstd gzip
+
+	# Mercure hub: Jams publish their changes here (mercure_publish) and members' devices listen.
+	# Updates are private: a device needs a token for its Jam's topic, which the API hands to members.
+	handle /.well-known/mercure* {
+		mercure {
+			publisher_jwt {env.MERCURE_PUBLISHER_JWT_KEY}
+			subscriber_jwt {env.MERCURE_SUBSCRIBER_JWT_KEY}
+			# The Android app runs on its own origin; tokens travel in the URL, so no cookies are involved.
+			cors_origins *
+		}
+	}
 
 	# Laravel API (and the /up health check).
 	@backend path /api/* /up

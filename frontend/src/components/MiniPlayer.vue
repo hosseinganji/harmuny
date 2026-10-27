@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useLikePop } from '@/lib/motion'
-import { Heart, Loader2, Pause, Play, SkipForward } from 'lucide-vue-next'
+import { Heart, Loader2, Pause, Play, SkipForward, UsersRound } from 'lucide-vue-next'
 import { t } from '@/lib/i18n'
+import { useJam } from '@/stores/jam'
 import { useLibrary } from '@/stores/library'
 import { usePlayer } from '@/stores/player'
 import { useUi } from '@/stores/ui'
@@ -10,6 +11,7 @@ import TrackCover from './TrackCover.vue'
 const player = usePlayer()
 const library = useLibrary()
 const ui = useUi()
+const jam = useJam()
 
 // Swipe left/right on the mini player to change tracks.
 let startX = 0
@@ -32,7 +34,11 @@ const likePop = useLikePop(() => !!player.track && library.isLiked(player.track)
       @touchstart.passive="touchStart"
       @touchend="touchEnd"
     >
-      <TrackCover :track="player.track" size="md" rounded="rounded-full" />
+      <span class="relative shrink-0">
+        <TrackCover :track="player.track" size="md" rounded="rounded-full" />
+        <!-- In a Jam: listening together. -->
+        <span v-if="jam.active" class="absolute -bottom-0.5 -end-0.5 flex size-5 items-center justify-center rounded-full bg-accent text-white ring-2 ring-bg"><UsersRound class="size-3" /></span>
+      </span>
       <div class="min-w-0 flex-1">
         <div class="truncate text-sm font-semibold">{{ player.track.title }}</div>
         <div class="truncate text-xs text-muted">{{ player.track.artist ?? t('track.unknownArtist') }}</div>

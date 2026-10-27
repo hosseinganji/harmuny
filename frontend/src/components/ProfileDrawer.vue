@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onKeyStroke } from '@vueuse/core'
-import { BarChart3, ChevronRight, Download, HardDrive, Heart, History, LogOut, Settings, Shield } from 'lucide-vue-next'
+import { BarChart3, ChevronRight, Download, HardDrive, Heart, History, LogOut, Settings, Shield, UsersRound } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Avatar from '@/components/Avatar.vue'
@@ -16,6 +16,7 @@ const version = __APP_VERSION__
 const buildDate = __BUILD_DATE__
 
 const items = computed(() => [
+  { to: '/jam', icon: UsersRound, label: t('jam.title') },
   { to: '/library/liked', icon: Heart, label: t('library.liked') },
   { to: '/library/downloads', icon: Download, label: t('library.downloads') },
   { to: '/library/device', icon: HardDrive, label: t('library.device') },

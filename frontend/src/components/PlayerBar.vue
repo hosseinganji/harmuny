@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Heart, ListMusic, Maximize2, MicVocal, MonitorSpeaker } from 'lucide-vue-next'
+import { Heart, ListMusic, Maximize2, MicVocal, MonitorSpeaker, UsersRound } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { duration } from '@/lib/format'
 import { t } from '@/lib/i18n'
+import { useJam } from '@/stores/jam'
 import { useLibrary } from '@/stores/library'
 import { usePlayer } from '@/stores/player'
 import { useUi } from '@/stores/ui'
@@ -15,6 +16,7 @@ import VolumeControl from './VolumeControl.vue'
 const player = usePlayer()
 const library = useLibrary()
 const ui = useUi()
+const jam = useJam()
 const preview = ref<number | null>(null)
 </script>
 
@@ -68,6 +70,9 @@ const preview = ref<number | null>(null)
     <!-- Extras -->
     <div class="flex w-[30%] items-center justify-end gap-1">
       <PlaybackOptions />
+      <RouterLink to="/jam" class="icon-btn size-9" :class="{ '!bg-accent !text-white': jam.active }" :aria-label="jam.active ? t('jam.open') : t('jam.start')" :title="jam.active ? t('jam.open') : t('jam.start')">
+        <UsersRound class="size-4.5" />
+      </RouterLink>
       <button class="icon-btn size-9" :class="{ '!text-accent': ui.sidePanel === 'lyrics' }" :aria-label="t('player.lyrics')" @click="ui.toggleSidePanel('lyrics')">
         <MicVocal class="size-4.5" />
       </button>

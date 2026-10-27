@@ -8,6 +8,7 @@ import AddToPlaylistDialog from '@/components/AddToPlaylistDialog.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import BottomNav from '@/components/BottomNav.vue'
 import EditTrackDialog from '@/components/EditTrackDialog.vue'
+import JamReactions from '@/components/JamReactions.vue'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import MobileTopBar from '@/components/MobileTopBar.vue'
 import NewPlaylistDialog from '@/components/NewPlaylistDialog.vue'
@@ -26,6 +27,7 @@ import { useAuth } from '@/stores/auth'
 import { useDeviceSync } from '@/stores/deviceSync'
 import { useDownloads } from '@/stores/downloads'
 import { useEqualizer } from '@/stores/equalizer'
+import { useJam } from '@/stores/jam'
 import { useLibrary } from '@/stores/library'
 import { usePlayer } from '@/stores/player'
 import { usePlaylists } from '@/stores/playlists'
@@ -55,6 +57,8 @@ setUnauthorizedHandler(async () => {
 async function boot() {
   await Promise.all([library.load(), downloads.load()])
   player.restore()
+  // Back into the Jam this member was in (paused until they press play).
+  useJam().restore()
   auth.refresh()
   playlists.load()
   library.sync()
@@ -149,6 +153,7 @@ function pageKey(r: RouteLocationNormalizedLoaded) {
     <AddToPlaylistDialog />
     <EditTrackDialog />
     <NewPlaylistDialog :open="newPlaylist" @close="newPlaylist = false" />
+    <JamReactions />
   </template>
   <RouterView v-else />
   <Toasts />

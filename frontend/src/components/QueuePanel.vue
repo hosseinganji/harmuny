@@ -4,14 +4,17 @@ import { computed } from 'vue'
 import Draggable from 'vuedraggable'
 import { duration, num } from '@/lib/format'
 import { t } from '@/lib/i18n'
+import { useJam } from '@/stores/jam'
 import { type QueueItem, usePlayer } from '@/stores/player'
 import { useUi } from '@/stores/ui'
+import Avatar from './Avatar.vue'
 import PlayingBars from './PlayingBars.vue'
 import TrackCover from './TrackCover.vue'
 
 defineProps<{ compact?: boolean }>()
 const player = usePlayer()
 const ui = useUi()
+const jam = useJam()
 
 const upcoming = computed({
   get: () => player.upcoming,
@@ -65,6 +68,10 @@ const upcoming = computed({
             </div>
             <div class="truncate text-xs text-muted">{{ element.track.artist ?? t('track.unknownArtist') }}</div>
           </div>
+          <template v-if="jam.active">
+            <Sparkles v-if="element.by == null" class="size-4 shrink-0 fill-current text-accent" :aria-label="t('jam.jamMix')" />
+            <Avatar v-else :name="jam.member(element.by)?.name" :src="jam.member(element.by)?.avatar_url" size="size-6 text-[9px]" />
+          </template>
           <span v-if="!compact" class="text-xs text-subtle tabular group-hover:hidden">{{ duration(element.track.duration) }}</span>
           <button class="icon-btn hidden size-8 group-hover:inline-flex" :aria-label="t('queue.remove')" @click.stop="player.remove(element.uid)">
             <X class="size-4" />
