@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="playback_channel">پخش موسیقی</string>
+    <string name="action_previous">قبلی</string>
+    <string name="action_play">پخش</string>
+    <string name="action_pause">توقف</string>
+    <string name="action_next">بعدی</string>
+</resources>

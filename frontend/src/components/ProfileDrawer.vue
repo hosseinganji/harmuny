@@ -4,6 +4,7 @@ import { BarChart3, ChevronRight, Download, HardDrive, Heart, History, LogOut, S
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Avatar from '@/components/Avatar.vue'
+import { apiBase, isNative } from '@/lib/config'
 import { t } from '@/lib/i18n'
 import { useAuth } from '@/stores/auth'
 import { useUi } from '@/stores/ui'
@@ -42,14 +43,17 @@ const updateAvailable = computed(() => !!latest.value && isNewer(latest.value, v
 watch(() => ui.drawerOpen, async (open) => {
   if (!open || !navigator.onLine) return
   try {
-    const res = await fetch('/version.json', { cache: 'no-store' })
+    const res = await fetch(`${apiBase()}/version.json`, { cache: 'no-store' })
     if (res.ok) latest.value = (await res.json()).version ?? null
   } catch {
     // Offline or blocked: show no badge.
   }
 })
+/** The Android app updates by installing the newest APK from GitHub; the web app by reloading. */
+const APK_URL = 'https://github.com/hosseinganji/harmuny/releases/latest/download/harmony.apk'
 function update() {
-  location.reload()
+  if (isNative) location.href = APK_URL
+  else location.reload()
 }
 
 // Reports live under /admin but have their own entry, so Admin is not lit up there too.
