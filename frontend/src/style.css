@@ -39,8 +39,9 @@
   --accent-fg: #ffffff;
   --dyn: 232 96 76;
   --player-h: 0px;
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* The Android app's web view gets the insets from Capacitor as --safe-area-inset-* instead. */
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
   color-scheme: dark;
 }
 

@@ -19,7 +19,9 @@ import SidePanel from '@/components/SidePanel.vue'
 import Toasts from '@/components/Toasts.vue'
 import TrackMenu from '@/components/TrackMenu.vue'
 import { setUnauthorizedHandler } from '@/lib/api'
+import { isNative } from '@/lib/config'
 import { setPlayerArtwork } from '@/lib/dynamicColor'
+import { startNativePlayback } from '@/lib/nativePlayback'
 import { startPresence } from '@/lib/presence'
 import { keepRadioGoing } from '@/lib/radio'
 import { t } from '@/lib/i18n'
@@ -46,8 +48,11 @@ const newPlaylist = ref(false)
 
 const shell = computed(() => auth.isLoggedIn && !route.meta.guest)
 
-// Install updates in the background; the new version applies on next launch.
-useRegisterSW({ immediate: true })
+// Install updates in the background; the new version applies on next launch. The Android app ships its
+// files inside the APK (updates come as a new APK), so no service worker there.
+if (!isNative) useRegisterSW({ immediate: true })
+// Android app: the native service keeps music going with the screen off, and gives the media controls.
+startNativePlayback()
 
 setUnauthorizedHandler(async () => {
   await auth.logout(false)

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Server } from 'lucide-vue-next'
 import { ref } from 'vue'
-import { isNative, savedApiBase, setApiBase } from '@/lib/config'
+import { apiBase, isNative, savedApiBase, setApiBase } from '@/lib/config'
 import { t } from '@/lib/i18n'
 
 // The native app has no same-origin backend, so the server address is asked for here.
-const open = ref(isNative && !savedApiBase())
+const open = ref(isNative && !apiBase())
 const server = ref(savedApiBase())
 </script>
 

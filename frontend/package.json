@@ -1,7 +1,7 @@
 {
   "name": "smart-music-player",
   "private": true,
-  "version": "1.10.0",
+  "version": "1.11.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "icons": "pwa-assets-generator",
     "typecheck": "vue-tsc -b",
-    "android": "npm run build && npx cap sync android && npx cap open android"
+    "android": "npm run build && npx cap sync android && npx cap open android",
+    "android:apk": "VITE_API_URL=https://harmony-musics.ir npm run build && npx cap sync android && cd android && ./gradlew assembleRelease"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.3",

@@ -92,6 +92,16 @@ frontend/  Vue: stores/player.ts (صف، شافل، تکرار، Media Session)�
 docker/    Caddyfile، php.ini، entrypoint
 ```
 
+## اپ اندروید
+
+نسخه‌ی آماده در [Releases گیت‌هاب](https://github.com/hosseinganji/harmuny/releases/latest) است (`harmony.apk`). اپ خودش به `harmony-musics.ir` وصل می‌شود و وقتی نسخه‌ی جدید بیاید، در منوی پروفایل دکمه‌ی به‌روزرسانی نشان می‌دهد.
+
+با صفحه‌ی خاموش هم پخش ادامه پیدا می‌کند: یک سرویس پخش اندروید (`PlaybackService.java`) تا وقتی آهنگ پخش می‌شود CPU و Wi‑Fi را بیدار نگه می‌دارد. نوتیفیکیشن پخش و کنترل از صفحه‌ی قفل، هدفون، بلوتوث و ماشین هم از همین سرویس می‌آیند.
+
+ساختن APK به JDK 21 و Android SDK (در `~/Android`) نیاز دارد:
+`JAVA_HOME=~/Android/jdk ANDROID_HOME=~/Android/Sdk npm run android:apk`
+کلید امضا بیرون از مخزن است (`~/Android/harmony-release.jks` و `harmony-release.properties`). از آن نسخه‌ی پشتیبان نگه دار: بدون همین کلید، نسخه‌های بعدی روی اپ نصب‌شده نصب نمی‌شوند.
+
 ## محدودیت‌ها
 
 - iOS به وب‌اپ‌ها اجازه‌ی اسکن حافظه نمی‌دهد؛ آهنگ‌ها باید از برنامه‌ی Files انتخاب شوند (داخل برنامه کپی می‌شوند).
