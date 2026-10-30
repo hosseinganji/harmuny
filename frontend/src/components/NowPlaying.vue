@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useLikePop } from '@/lib/motion'
 import { ChevronDown, Download, Heart, ListMusic, Loader2, MicVocal, MoreHorizontal, UsersRound } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { duration } from '@/lib/format'
 import { t } from '@/lib/i18n'
@@ -47,34 +47,82 @@ const tab = ref<'art' | 'lyrics' | 'queue'>('art')
 const desktopTab = ref<'lyrics' | 'queue'>('lyrics')
 const preview = ref<number | null>(null)
 
-watch(() => ui.nowPlayingOpen, (open) => {
-  if (open) tab.value = 'art'
+// The sheet stays rendered below the screen while a song is loaded, so opening it is only a slide (nothing
+// to build first), moved on the GPU. A drag moves it with the finger, with no re-rendering; let go, it
+// glides back up or carries on down at the speed of the flick.
+const sheet = ref<HTMLElement>()
+const shade = ref<HTMLElement>()
+const shown = ref(false)
+const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
+let closeMs = 300
+
+const height = () => sheet.value?.offsetHeight || innerHeight
+
+function place(y: number, ms: number) {
+  const el = sheet.value
+  if (!el) return
+  el.style.transition = ms ? `transform ${ms}ms ${EASE}` : 'none'
+  el.style.transform = `translate3d(0, ${y}px, 0)`
+  if (shade.value) {
+    shade.value.style.transition = ms ? `opacity ${ms}ms linear` : 'none'
+    shade.value.style.opacity = String(Math.max(0, 1 - y / height()))
+  }
+}
+
+watch(() => ui.nowPlayingOpen, async (open) => {
+  if (open) {
+    tab.value = 'art'
+    shown.value = true
+    await nextTick()
+    place(height(), 0)
+    // Two frames: the start position is painted before the slide begins.
+    requestAnimationFrame(() => requestAnimationFrame(() => ui.nowPlayingOpen && place(0, 420)))
+  } else if (shown.value) {
+    place(height(), closeMs)
+    closeMs = 300
+  }
 })
 
-// Drag the sheet down to dismiss it.
-const dragY = ref(0)
+function slid(e: TransitionEvent) {
+  if (e.target === sheet.value && e.propertyName === 'transform' && !ui.nowPlayingOpen) shown.value = false
+}
+
 let startY = 0
+let lastY = 0
+let lastT = 0
+let velocity = 0
+let dy = 0
 let dragging = false
 function touchStart(e: TouchEvent) {
-  startY = e.touches[0].clientY
   dragging = true
+  startY = lastY = e.touches[0].clientY
+  lastT = e.timeStamp
+  velocity = 0
+  dy = 0
 }
 function touchMove(e: TouchEvent) {
   if (!dragging) return
-  isDragging.value = true
-  dragY.value = Math.max(0, e.touches[0].clientY - startY)
+  const y = e.touches[0].clientY
+  const dt = e.timeStamp - lastT
+  if (dt > 0) velocity = 0.8 * ((y - lastY) / dt) + 0.2 * velocity
+  lastY = y
+  lastT = e.timeStamp
+  dy = Math.max(0, y - startY)
+  place(dy, 0)
 }
-const isDragging = ref(false)
 function touchEnd() {
+  if (!dragging) return
   dragging = false
-  isDragging.value = false
-  // Closing keeps the dragged offset so the sheet carries on down from where it was let go.
-  if (dragY.value > 120) ui.nowPlayingOpen = false
-  else dragY.value = 0
+  if (dy < 4) return
+  const h = height()
+  if (dy > h * 0.22 || velocity > 0.45) {
+    // Carry on at the speed of the flick (never slower than a normal close).
+    closeMs = Math.round(Math.min(320, Math.max(150, (h - dy) / Math.max(velocity, 1.4))))
+    ui.nowPlayingOpen = false
+  } else {
+    place(0, 340)
+  }
 }
-watch(() => ui.nowPlayingOpen, (open) => open && (dragY.value = 0))
-
-const sheetStyle = computed(() => ({ '--drag': `${dragY.value}px`, ...(isDragging.value ? { transition: 'none' } : {}) }))
 const downloadState = computed(() => {
   const tr = player.track
   if (!tr || tr.kind !== 'remote') return null
@@ -89,20 +137,20 @@ const likePop = useLikePop(() => !!player.track && library.isLiked(player.track)
 
 <template>
   <!-- On phones the player is a sheet covering 90% of the screen, like the other sheets; full screen on desktop. -->
-  <Transition name="fade">
-    <div v-if="ui.nowPlayingOpen && player.track" class="fixed inset-0 z-50 bg-black/50 lg:hidden" @click="ui.nowPlayingOpen = false" />
-  </Transition>
-  <Transition name="sheet">
+  <template v-if="player.track">
+    <div ref="shade" class="fixed inset-0 z-50 bg-black/50 opacity-0 lg:hidden" :class="{ invisible: !shown }" @click="ui.nowPlayingOpen = false" />
     <div
-      v-if="ui.nowPlayingOpen && player.track"
+      ref="sheet"
       class="np-sheet fixed inset-x-0 bottom-0 top-[10dvh] z-50 flex flex-col overflow-hidden rounded-t-[2rem] bg-bg text-fg shadow-[0_-20px_60px_rgba(0,0,0,0.5)] lg:top-0 lg:rounded-none"
-      :style="sheetStyle"
+      :class="{ invisible: !shown }"
       role="dialog"
       :aria-label="t('player.nowPlaying')"
+      :aria-hidden="!shown"
+      @transitionend="slid"
     >
-      <!-- Artwork-tinted backdrop -->
-      <div class="pointer-events-none absolute inset-0">
-        <img v-if="player.coverSrc" :src="player.coverSrc" class="size-full scale-125 object-cover opacity-50 blur-3xl" alt="" />
+      <!-- Artwork-tinted backdrop: a tiny, lightly blurred copy blown up (the same look as a big blur, at a fraction of the cost). -->
+      <div class="pointer-events-none absolute inset-0 overflow-hidden">
+        <img v-if="player.coverSrc" :src="player.coverSrc" class="absolute left-1/2 top-1/2 size-12 -translate-x-1/2 -translate-y-1/2 scale-[16] object-cover opacity-50 blur-[3px]" alt="" />
         <div class="absolute inset-0" style="background: linear-gradient(180deg, rgb(var(--dyn) / 0.55), color-mix(in oklab, var(--bg) 85%, transparent) 60%, var(--bg))" />
       </div>
 
@@ -241,5 +289,5 @@ const likePop = useLikePop(() => !!player.track && library.isLiked(player.track)
         </div>
       </div>
     </div>
-  </Transition>
+  </template>
 </template>

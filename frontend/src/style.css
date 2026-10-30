@@ -317,10 +317,11 @@ input[type='range'].range {
   will-change: transform;
 }
 
-/* Now Playing follows the finger while dragged (--drag), then glides back or away. */
 .np-sheet {
-  transform: translateY(var(--drag, 0px));
-  transition: transform 0.3s var(--ease-sheet);
+  /* Starts below the screen; NowPlaying.vue slides it (on its own GPU layer). */
+  transform: translate3d(0, 100%, 0);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .fade-enter-active,
