@@ -20,6 +20,23 @@ return [
 
     // MadelineProto session directory, relative to storage/app.
     'telegram_session' => env('TELEGRAM_SESSION', 'telegram/session.madeline'),
+    // App keys for the user-account session (discovery) when none were entered in the admin panel; the same
+    // ones the local Bot API server uses.
+    'telegram_api_id' => env('TELEGRAM_API_ID'),
+    'telegram_api_hash' => env('TELEGRAM_API_HASH'),
+
+    // Daily discovery: public channels read with the connected Telegram account for new songs by the artists
+    // members follow or play most. Only songs posted in the last few days, and only so many per run.
+    'discovery' => [
+        'channels' => array_filter(explode(',', env('MUSIC_DISCOVERY_CHANNELS', 'ahangify,music_vip12'))),
+        'days' => (int) env('MUSIC_DISCOVERY_DAYS', 7),
+        'max_per_run' => (int) env('MUSIC_DISCOVERY_MAX', 30),
+        'max_file_mb' => (int) env('MUSIC_DISCOVERY_MAX_FILE_MB', 60),
+        'artists' => (int) env('MUSIC_DISCOVERY_ARTISTS', 40),
+    ],
+
+    // Admin uploads.
+    'upload_max_mb' => (int) env('MUSIC_UPLOAD_MAX_MB', 200),
 
     // Bot API mode: sync through a bot that is an admin of the channel (no my.telegram.org keys needed).
     'bot' => [

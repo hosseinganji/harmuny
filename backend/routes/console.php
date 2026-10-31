@@ -28,3 +28,6 @@ Schedule::command('music:prefetch')->everyTenMinutes()->withoutOverlapping();
 
 // Jams whose members all closed the app: drop members away for long, and end Jams nobody is left in.
 Schedule::call(fn () => app(JamService::class)->tidyAll())->name('jams-tidy')->everyFiveMinutes()->withoutOverlapping();
+
+// Daily discovery: new songs from this week by followed and popular artists, from the public channels.
+Schedule::command('music:discover')->dailyAt('05:30')->withoutOverlapping(120)->runInBackground();

@@ -9,6 +9,7 @@ import AppSidebar from '@/components/AppSidebar.vue'
 import BottomNav from '@/components/BottomNav.vue'
 import EditTrackDialog from '@/components/EditTrackDialog.vue'
 import JamReactions from '@/components/JamReactions.vue'
+import TrackInfoDialog from '@/components/TrackInfoDialog.vue'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import MobileTopBar from '@/components/MobileTopBar.vue'
 import NewPlaylistDialog from '@/components/NewPlaylistDialog.vue'
@@ -159,6 +160,7 @@ function pageKey(r: RouteLocationNormalizedLoaded) {
     <EditTrackDialog />
     <NewPlaylistDialog :open="newPlaylist" @close="newPlaylist = false" />
     <JamReactions />
+    <TrackInfoDialog />
   </template>
   <RouterView v-else />
   <Toasts />

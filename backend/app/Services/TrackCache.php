@@ -146,7 +146,8 @@ class TrackCache
         if ($maxBytes <= 0) {
             return 0; // Unlimited.
         }
-        $tracks = Track::withTrashed()->whereNotNull('cache_path')->orderBy('cache_used_at')->get();
+        // Uploads and discovered songs have no copy anywhere else: never pruned.
+        $tracks = Track::withTrashed()->whereNotNull('cache_path')->where('source', Track::SOURCE_TELEGRAM)->orderBy('cache_used_at')->get();
 
         $total = $tracks->sum(fn (Track $t) => $t->isCached() ? filesize($t->cacheAbsolutePath()) : 0);
         $freed = 0;

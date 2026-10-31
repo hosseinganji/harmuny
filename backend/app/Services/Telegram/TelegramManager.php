@@ -30,7 +30,20 @@ class TelegramManager
 
     public function hasCredentials(): bool
     {
-        return Setting::get('telegram.api_id') && Setting::getSecret('telegram.api_hash');
+        return $this->apiId() && $this->apiHash();
+    }
+
+    /** The keys entered in the admin panel, else the ones in .env (shared with the local Bot API server). */
+    private function apiId(): ?int
+    {
+        $id = Setting::get('telegram.api_id') ?: config('music.telegram_api_id');
+
+        return $id ? (int) $id : null;
+    }
+
+    private function apiHash(): ?string
+    {
+        return Setting::getSecret('telegram.api_hash') ?: config('music.telegram_api_hash');
     }
 
     public function setCredentials(int $apiId, string $apiHash): void
@@ -53,8 +66,8 @@ class TelegramManager
         $settings = new Settings;
         $settings->setAppInfo(
             (new AppInfo)
-                ->setApiId((int) Setting::get('telegram.api_id'))
-                ->setApiHash(Setting::getSecret('telegram.api_hash'))
+                ->setApiId($this->apiId())
+                ->setApiHash($this->apiHash())
                 ->setDeviceModel('SmartMusicPlayer')
                 ->setAppVersion('1.0')
         );

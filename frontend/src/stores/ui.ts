@@ -40,6 +40,8 @@ export const useUi = defineStore('ui', () => {
 
   const addToPlaylist = shallowRef<Track[] | null>(null)
   const editTrack = shallowRef<Track | null>(null)
+  /** The song whose details sheet is open. */
+  const trackInfo = shallowRef<Track | null>(null)
 
   const nowPlayingOpen = ref(false)
   const drawerOpen = ref(false)
@@ -53,7 +55,7 @@ export const useUi = defineStore('ui', () => {
   return {
     toasts, toast, dismiss,
     menu, openTrackMenu,
-    addToPlaylist, editTrack,
+    addToPlaylist, editTrack, trackInfo,
     nowPlayingOpen, drawerOpen, sidePanel, toggleSidePanel,
   }
 })

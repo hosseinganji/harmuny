@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\ChannelController;
+use App\Http\Controllers\Api\Admin\DiscoveryController;
+use App\Http\Controllers\Api\Admin\UploadController;
+use App\Http\Controllers\Api\ArtistFollowController;
+use App\Http\Controllers\Api\SongRequestController;
 use App\Http\Controllers\Api\Admin\ReportsController;
 use App\Http\Controllers\Api\Admin\StatsController;
 use App\Http\Controllers\Api\Admin\TelegramController;
@@ -57,6 +61,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('library/sync', [TrackController::class, 'sync']);
     Route::get('tracks', [TrackController::class, 'index']);
     Route::get('tracks/{track}', [TrackController::class, 'show']);
+    Route::get('tracks/{track}/details', [TrackController::class, 'details']);
     Route::get('tracks/{track}/lyrics', [LyricsController::class, 'track']);
     Route::get('lyrics/lookup', [LyricsController::class, 'lookup']);
     Route::get('artists', [TrackController::class, 'artists']);
@@ -64,6 +69,14 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('search', SearchController::class);
     Route::get('radio', [RadioController::class, 'radio']);
     Route::get('mixes/daily', [RadioController::class, 'dailyMix']);
+    Route::get('mixes/release-radar', [RadioController::class, 'releaseRadar']);
+    Route::get('follows', [ArtistFollowController::class, 'index']);
+    Route::post('follows', [ArtistFollowController::class, 'store']);
+    Route::delete('follows', [ArtistFollowController::class, 'destroy']);
+    Route::get('requests', [SongRequestController::class, 'index']);
+    Route::post('requests', [SongRequestController::class, 'store'])->middleware('throttle:20,1');
+    Route::patch('requests/{songRequest}', [SongRequestController::class, 'update']);
+    Route::delete('requests/{songRequest}', [SongRequestController::class, 'destroy']);
     Route::post('smart-shuffle', [RadioController::class, 'smartShuffle']);
 
     // Jams: listening together.
@@ -131,6 +144,11 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::patch('channels/{channel}', [ChannelController::class, 'update']);
         Route::delete('channels/{channel}', [ChannelController::class, 'destroy']);
         Route::post('channels/{channel}/sync', [ChannelController::class, 'sync']);
+
+        Route::post('uploads', [UploadController::class, 'store']);
+        Route::get('discovery', [DiscoveryController::class, 'status']);
+        Route::put('discovery/channels', [DiscoveryController::class, 'channels']);
+        Route::post('discovery/run', [DiscoveryController::class, 'run']);
 
         Route::patch('tracks/{track}', [TrackAdminController::class, 'update']);
         Route::post('tracks/{track}/cover', [TrackAdminController::class, 'uploadCover']);

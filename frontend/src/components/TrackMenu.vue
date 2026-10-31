@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onClickOutside, onKeyStroke, useMediaQuery } from '@vueuse/core'
 import {
-  CircleMinus, Download, EyeOff, Heart, Radio, ListEnd, ListMinus, ListPlus, ListStart, PencilLine, Share2, Trash2, UserRound,
+  CircleMinus, Download, EyeOff, Heart, Info, Radio, ListEnd, ListMinus, ListPlus, ListStart, PencilLine, Share2, Trash2, UserRound,
 } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -122,6 +122,7 @@ async function hide(track: Track) {
           <button v-if="single?.kind === 'remote' && single.artist" @click="run(() => router.push({ name: 'artist', query: { name: single!.artist! } }))">
             <UserRound />{{ t('menu.goToArtist') }}
           </button>
+          <button v-if="single" @click="run(() => (ui.trackInfo = single))"><Info />{{ t('info.title') }}</button>
           <button v-if="single" @click="run(() => share(single!))"><Share2 />{{ t('menu.share') }}</button>
           <button v-if="single?.kind === 'local'" @click="run(() => local.removeTrack(single as any))"><Trash2 />{{ t('menu.removeFromDevice') }}</button>
           <template v-if="authStore.isAdmin && single?.kind === 'remote'">

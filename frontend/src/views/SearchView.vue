@@ -144,7 +144,10 @@ const tabs = computed(() => [
     </section>
   </div>
 
-  <EmptyState v-else-if="!hasResults" :icon="SearchX" :title="t('search.noResults', { q: query })" :text="t('search.noResultsHint')" />
+  <EmptyState v-else-if="!hasResults" :icon="SearchX" :title="t('search.noResults', { q: query })" :text="t('search.noResultsHint')">
+    <!-- Not in the library: ask for it. -->
+    <RouterLink :to="{ name: 'requests', query: { q: query } }" class="btn-primary">{{ t('requests.askFor') }}</RouterLink>
+  </EmptyState>
 
   <div v-else class="space-y-8 px-2 pt-2 sm:px-4">
     <template v-if="tab === 'all'">
