@@ -116,10 +116,42 @@ class TrackController extends Controller
 
         return response()->json([
             'name' => $name,
+            'following' => DB::table('artist_follows')->where('user_id', $request->user()->id)->where('artist', $name)->exists(),
+            'followers' => DB::table('artist_follows')->where('artist', $name)->count(),
             'tracks_count' => $tracks->count(),
             'duration' => (int) $tracks->sum('duration'),
             'cover_track_id' => $tracks->firstWhere('has_cover', true)?->id,
             'tracks' => TrackResource::collection($tracks),
+        ]);
+    }
+
+    /** Everything about one song: where it came from and who brought it, its quality and how it is doing. */
+    public function details(Request $request, Track $track): JsonResponse
+    {
+        $track->load(['channel', 'addedBy']);
+        $ext = strtolower(pathinfo((string) $track->file_name, PATHINFO_EXTENSION));
+
+        return response()->json([
+            'id' => $track->id,
+            'source' => $track->source,
+            'source_url' => $track->source_url,
+            'channel' => $track->source === Track::SOURCE_TELEGRAM && $track->channel
+                ? ['title' => $track->channel->title, 'username' => $track->channel->username ?? null]
+                : null,
+            // Discovery: the public channel it was found in.
+            'found_in' => $track->source === Track::SOURCE_DISCOVERY && preg_match('#t\.me/([^/]+)/#', (string) $track->source_url, $m) ? $m[1] : null,
+            'added_by' => $track->addedBy ? ['id' => $track->addedBy->id, 'name' => $track->addedBy->name, 'avatar_url' => $track->addedBy->avatarUrl()] : null,
+            'added_at' => $track->created_at?->toIso8601String(),
+            'posted_at' => $track->posted_at?->toIso8601String(),
+            'format' => $ext ?: ($track->mime_type ? preg_replace('#^audio/(x-)?#', '', $track->mime_type) : null),
+            'bitrate' => $track->bitrate(),
+            'file_size' => (int) $track->file_size,
+            'duration' => (int) $track->duration,
+            'on_server' => $track->isCached(),
+            'play_count' => (int) $track->play_count,
+            'listeners' => DB::table('plays')->where('track_id', $track->id)->distinct()->count('user_id'),
+            'likes' => DB::table('track_likes')->where('track_id', $track->id)->count(),
+            'followers' => $track->artist ? DB::table('artist_follows')->where('artist', $track->artist)->count() : 0,
         ]);
     }
 

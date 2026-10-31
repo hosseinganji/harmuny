@@ -18,6 +18,12 @@ class TrackUpserter
             'message_id' => $data['message_id'],
         ]);
 
+        // A new post of a song the library already has (from another channel, an upload…): keep the one we have.
+        if (! $track->exists && ($same = Track::findDuplicate($data['artist'] ?? null, (string) ($data['title'] ?? ''), (int) ($data['duration'] ?? 0)))) {
+            return $same;
+        }
+        $data['source_url'] ??= Track::postUrl($channel->username ?: $channel->peer, $channel->telegram_id, (int) $data['message_id']);
+
         if ($track->exists && $track->metadata_locked) {
             // An admin fixed the metadata by hand; only refresh file facts.
             $data = array_intersect_key($data, array_flip([
@@ -33,7 +39,8 @@ class TrackUpserter
         }
 
         $track->fill($data);
-        if ($track->trashed()) {
+        // Back in the channel: show it again, unless it was merged into another copy of the same song.
+        if ($track->trashed() && ! Track::query()->where('match_key', Track::matchKey($track->artist, $track->title))->whereKeyNot($track->id)->exists()) {
             $track->deleted_at = null;
         }
         $track->save();

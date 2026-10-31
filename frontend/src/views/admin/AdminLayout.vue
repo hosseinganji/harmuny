@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BarChart3, LayoutDashboard, Send, Users } from 'lucide-vue-next'
+import { BarChart3, CloudUpload, LayoutDashboard, Radar, Send, Users } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { t } from '@/lib/i18n'
@@ -9,6 +9,8 @@ const tabs = computed(() => [
   { name: 'admin', label: t('admin.dashboard'), icon: LayoutDashboard },
   { name: 'admin-reports', label: t('reports.title'), icon: BarChart3 },
   { name: 'admin-users', label: t('admin.users'), icon: Users },
+  { name: 'admin-upload', label: t('upload.tab'), icon: CloudUpload },
+  { name: 'admin-discovery', label: t('discovery.tab'), icon: Radar },
   { name: 'admin-telegram', label: t('admin.telegram'), icon: Send },
 ])
 </script>

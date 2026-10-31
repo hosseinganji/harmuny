@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ChevronRight, Download, HardDrive, Heart, Play, RefreshCw, Sparkles } from 'lucide-vue-next'
+import { ChevronRight, Download, HardDrive, Heart, Play, Radar, RefreshCw, Sparkles } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import ArtistCard from '@/components/ArtistCard.vue'
+import NewReleases from '@/components/NewReleases.vue'
 import PlaylistCard from '@/components/PlaylistCard.vue'
 import Shelf from '@/components/Shelf.vue'
 import TrackCard from '@/components/TrackCard.vue'
@@ -63,7 +64,18 @@ const quick = computed(() => [
 const mix = ref<ApiTrack[]>([])
 const mixCovers = computed(() => library.remember(mix.value.filter((x) => x.has_cover).slice(0, 4)))
 
+// Release Radar: what is new from the artists this member follows, likes or plays.
+const radar = ref<{ data: ApiTrack[]; personal: number } | null>(null)
+const radarCovers = computed(() => library.remember((radar.value?.data ?? []).filter((x) => x.has_cover).slice(0, 4)))
+function playRadar() {
+  const list = radar.value?.data ?? []
+  if (list.length) player.playTracks(library.remember(list), 0, { shuffle: false, context: { type: 'mix', name: t('radar.title') } })
+}
+
 async function load() {
+  cachedGet<{ data: ApiTrack[]; personal: number }>('/mixes/release-radar', undefined, (c) => (radar.value = c))
+    .then((res) => (radar.value = res))
+    .catch(() => {})
   cachedGet<{ data: ApiTrack[] }>('/mixes/daily', undefined, (c) => (mix.value = c.data))
     .then((res) => (mix.value = res.data))
     .catch(() => {})
@@ -88,6 +100,8 @@ onMounted(load)
         </p>
       </div>
     </div>
+
+    <NewReleases />
 
     <div class="mt-6 grid grid-cols-2 gap-2 px-4 sm:gap-3 sm:px-6">
       <!-- Liked songs gets the full width; the two below share a row. -->
@@ -128,6 +142,23 @@ onMounted(load)
           <span class="flex items-center gap-1.5 text-xs font-semibold text-accent"><Sparkles class="size-3.5" />{{ t('mix.kicker') }}</span>
           <span class="block truncate text-lg font-black">{{ t('mix.daily') }}</span>
           <span class="block truncate text-xs text-muted">{{ t('mix.dailyHint', { n: mix.length }) }}</span>
+        </span>
+        <span class="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-lg transition group-active:scale-90"><Play class="size-5 translate-x-px fill-current" /></span>
+      </button>
+
+      <!-- Release Radar: new songs by the artists this member follows. -->
+      <button
+        v-if="radar?.data.length"
+        class="group col-span-2 flex items-center gap-4 overflow-hidden rounded-2xl bg-fg/[0.06] p-3 text-start transition hover:bg-fg/10 active:scale-[0.98]"
+        @click="playRadar"
+      >
+        <span class="grid size-16 shrink-0 grid-cols-2 overflow-hidden rounded-xl shadow-lg">
+          <TrackCover v-for="tr in radarCovers" :key="tr.id" :track="tr" size="fill" rounded="rounded-none" />
+        </span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-accent"><Radar class="size-3.5" />{{ t('radar.kicker') }}</span>
+          <span class="block truncate text-lg font-black">{{ t('radar.title') }}</span>
+          <span class="block truncate text-xs text-muted">{{ radar.personal ? t('radar.personal', { n: radar.personal }) : t('radar.general', { n: radar.data.length }) }}</span>
         </span>
         <span class="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-lg transition group-active:scale-90"><Play class="size-5 translate-x-px fill-current" /></span>
       </button>

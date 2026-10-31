@@ -37,6 +37,27 @@ class RadioController extends Controller
         return response()->json(['data' => TrackResource::collection($radio->dailyMix($request->user()))->resolve($request)]);
     }
 
+    /**
+     * Release Radar: what came out in the last two weeks by the artists this member follows, likes or plays,
+     * newest first; topped up with everything new when that is too little.
+     */
+    public function releaseRadar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $artists = \Illuminate\Support\Facades\DB::table('artist_follows')->where('user_id', $user->id)->pluck('artist')
+            ->merge(Track::query()->join('track_likes', 'track_likes.track_id', '=', 'tracks.id')->where('track_likes.user_id', $user->id)->whereNotNull('tracks.artist')->distinct()->pluck('tracks.artist'))
+            ->merge(\App\Models\Play::query()->join('tracks', 'tracks.id', '=', 'plays.track_id')->where('plays.user_id', $user->id)->where('plays.played_at', '>=', now()->subDays(90))->whereNotNull('tracks.artist')->distinct()->pluck('tracks.artist'))
+            ->unique()->values();
+        $since = now()->subDays(14);
+        $mine = Track::query()->where('posted_at', '>=', $since)->whereIn('artist', $artists)->latest('posted_at')->limit(30)->get();
+        $rest = $mine->count() >= 15 ? collect() : Track::query()->where('posted_at', '>=', $since)->whereNotIn('id', $mine->pluck('id'))->latest('posted_at')->limit(30 - $mine->count())->get();
+
+        return response()->json([
+            'data' => TrackResource::collection($mine->merge($rest))->resolve($request),
+            'personal' => $mine->count(),
+        ]);
+    }
+
     /** Smart Shuffle: songs this member will likely enjoy, to mix into a shuffled queue. */
     public function smartShuffle(Request $request, RadioService $radio): JsonResponse
     {

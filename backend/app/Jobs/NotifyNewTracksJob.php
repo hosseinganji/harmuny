@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Tells members about songs that just arrived. New posts are collected for a minute and sent as one
@@ -44,10 +45,30 @@ class NotifyNewTracksJob implements ShouldBeUnique, ShouldQueue
             ->whereHas('user', fn ($q) => $q->where('status', User::STATUS_ACTIVE))
             ->get();
 
-        // Each member gets it in the app language they chose.
-        foreach ($subscriptions->groupBy(fn ($s) => ($s->user->preferences['language'] ?? 'en') === 'fa' ? 'fa' : 'en') as $lang => $subs) {
-            $push->send($subs, self::payload($tracks->all(), $lang));
+        // Members following an artist with a new song hear about that artist by name; everyone else gets the
+        // usual summary. Each in the app language they chose.
+        $followers = DB::table('artist_follows')->whereIn('artist', $tracks->pluck('artist')->filter()->unique())->get()->groupBy('user_id');
+        $lang = fn ($s) => ($s->user->preferences['language'] ?? 'en') === 'fa' ? 'fa' : 'en';
+        [$fans, $others] = $subscriptions->partition(fn ($s) => $followers->has($s->user_id));
+        foreach ($fans->groupBy('user_id') as $userId => $subs) {
+            $artists = $followers[$userId]->pluck('artist')->all();
+            $theirs = $tracks->filter(fn (Track $t) => in_array($t->artist, $artists, true))->values();
+            $push->send($subs, self::followedPayload($theirs->all(), $lang($subs->first())));
         }
+        foreach ($others->groupBy($lang) as $language => $subs) {
+            $push->send($subs, self::payload($tracks->all(), $language));
+        }
+    }
+
+    /** @param  Track[]  $tracks  songs by artists the member follows */
+    public static function followedPayload(array $tracks, string $lang): array
+    {
+        $artist = $tracks[0]->artist;
+        $line = fn (Track $t) => trim(($t->artist ? $t->artist.' – ' : '').$t->title);
+        $title = $lang === 'fa' ? '🎤 آهنگ جدید از '.$artist : '🎤 New from '.$artist;
+        $body = implode("\n", array_map($line, array_slice($tracks, 0, 3))).(count($tracks) > 3 ? "\n…" : '');
+
+        return ['title' => $title, 'body' => $body, 'url' => '/artist?name='.rawurlencode($artist), 'tag' => 'new-songs'];
     }
 
     /** @param  Track[]  $tracks */

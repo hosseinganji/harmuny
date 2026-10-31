@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onKeyStroke } from '@vueuse/core'
-import { BarChart3, ChevronRight, Download, HardDrive, Heart, History, LogOut, Settings, Shield, UsersRound } from 'lucide-vue-next'
+import { BarChart3, ChevronRight, Download, HandHelping, HardDrive, Heart, History, LogOut, Settings, Shield, UsersRound } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Avatar from '@/components/Avatar.vue'
@@ -22,6 +22,7 @@ const items = computed(() => [
   { to: '/library/downloads', icon: Download, label: t('library.downloads') },
   { to: '/library/device', icon: HardDrive, label: t('library.device') },
   { to: '/library/history', icon: History, label: t('library.history') },
+  { to: '/requests', icon: HandHelping, label: t('requests.title') },
   { to: '/settings', icon: Settings, label: t('settings.title') },
   // Admins only: the reports, and the rest of the admin area.
   ...(auth.isAdmin
