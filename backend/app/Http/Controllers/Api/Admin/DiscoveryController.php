@@ -31,6 +31,7 @@ class DiscoveryController extends Controller
             'days' => config('music.discovery.days'),
             'max_per_run' => config('music.discovery.max_per_run'),
             'artists' => array_values($discovery->artists()),
+            'similar' => $discovery->similarArtists(),
             'last_run' => Setting::get(TelegramDiscovery::LAST_RUN),
         ]);
     }

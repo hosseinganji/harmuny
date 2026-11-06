@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PlaylistResource;
 use App\Models\Playlist;
+use App\Models\Track;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -114,9 +115,25 @@ class PlaylistController extends Controller
             'track_ids.*' => ['integer', 'exists:tracks,id'],
             'allow_duplicates' => ['boolean'],
         ]);
-        $this->appendTracks($playlist, $data['track_ids'], ! ($data['allow_duplicates'] ?? false), $request->user()->id);
+        $added = $this->appendTracks($playlist, $data['track_ids'], ! ($data['allow_duplicates'] ?? false), $request->user()->id);
 
-        return $this->show($request, $playlist);
+        // How many were new, so the app can say "already in this playlist".
+        return $this->show($request, $playlist)->additional(['added' => $added, 'already' => count(array_unique($data['track_ids'])) - $added]);
+    }
+
+    /** Which of the member's playlists already hold a song (the "add to playlist" sheet marks them). */
+    public function containing(Request $request, Track $track): JsonResponse
+    {
+        $user = $request->user();
+        $ids = DB::table('playlist_track')
+            ->join('playlists', 'playlists.id', '=', 'playlist_track.playlist_id')
+            ->where('playlist_track.track_id', $track->id)
+            ->where(fn ($q) => $q->where('playlists.user_id', $user->id)
+                ->orWhereExists(fn ($e) => $e->from('playlist_collaborators')->whereColumn('playlist_collaborators.playlist_id', 'playlists.id')->where('playlist_collaborators.user_id', $user->id)))
+            ->distinct()
+            ->pluck('playlists.id');
+
+        return response()->json(['data' => $ids]);
     }
 
     public function removeTrack(Request $request, Playlist $playlist, int $entry): PlaylistResource
@@ -181,7 +198,8 @@ class PlaylistController extends Controller
         return response()->file(Storage::path($playlist->cover_path), ['Cache-Control' => 'private, max-age=604800']);
     }
 
-    private function appendTracks(Playlist $playlist, array $trackIds, bool $skipExisting, ?int $addedBy = null): void
+    /** @return int how many songs were added */
+    private function appendTracks(Playlist $playlist, array $trackIds, bool $skipExisting, ?int $addedBy = null): int
     {
         if ($skipExisting) {
             $existing = DB::table('playlist_track')->where('playlist_id', $playlist->id)->pluck('track_id')->all();
@@ -197,6 +215,8 @@ class PlaylistController extends Controller
             DB::table('playlist_track')->insert($rows);
             $playlist->touch();
         }
+
+        return count($rows);
     }
 
     private function authorizeOwner(Request $request, Playlist $playlist): void

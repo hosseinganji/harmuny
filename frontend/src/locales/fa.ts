@@ -695,4 +695,9 @@ export default {
   'discovery.noAccount': 'حساب تلگرامی وصل نیست',
   'discovery.summary': '{checked} آهنگ بررسی شد، {matched} از خواننده‌های مدنظر، {added} اضافه شد، {duplicates} از قبل بود',
   'discovery.never': 'هنوز اجرا نشده',
+  'toast.alreadyInPlaylist': 'این آهنگ از قبل در «{name}» هست',
+  'toast.allAlreadyInPlaylist': 'این آهنگ‌ها از قبل در «{name}» هستند',
+  'toast.addedSomeToPlaylist': '{n} آهنگ به «{name}» اضافه شد؛ {m} آهنگ از قبل بود',
+  'playlist.alreadyAdded': 'اضافه شده',
+  'discovery.similar': '{n} خواننده‌ی شبیه به پرشنونده‌هایتان',
 } as Record<string, string>

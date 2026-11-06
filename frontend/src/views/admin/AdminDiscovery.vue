@@ -18,6 +18,7 @@ interface Status {
   days: number
   max_per_run: number
   artists: string[]
+  similar: string[]
   last_run: { status: string; at: string; checked: number; matched: number; duplicates: number; failed: number; added: { id: number; title: string; artist: string | null; channel: string }[] } | null
 }
 
@@ -136,6 +137,7 @@ async function run() {
         <button class="btn-ghost h-12 shrink-0"><Plus class="size-4" />{{ t('discovery.add') }}</button>
       </form>
       <p class="mt-4 text-xs text-subtle">{{ t('discovery.artists', { n: status.artists.length }) }}: {{ status.artists.slice(0, 25).join('، ') }}{{ status.artists.length > 25 ? '…' : '' }}</p>
+      <p v-if="status.similar.length" class="mt-2 text-xs text-subtle">{{ t('discovery.similar', { n: status.similar.length }) }}: {{ status.similar.slice(0, 25).join('، ') }}{{ status.similar.length > 25 ? '…' : '' }}</p>
     </section>
 
     <!-- Last run -->

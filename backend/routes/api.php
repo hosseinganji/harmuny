@@ -110,6 +110,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::patch('playlists/{playlist}', [PlaylistController::class, 'update']);
     Route::delete('playlists/{playlist}', [PlaylistController::class, 'destroy']);
     Route::post('playlists/{playlist}/tracks', [PlaylistController::class, 'addTracks']);
+    Route::get('tracks/{track}/playlists', [PlaylistController::class, 'containing']);
     Route::delete('playlists/{playlist}/tracks/{entry}', [PlaylistController::class, 'removeTrack']);
     Route::put('playlists/{playlist}/order', [PlaylistController::class, 'reorder']);
     Route::put('playlists/{playlist}/collaborators', [PlaylistController::class, 'setCollaborators']);

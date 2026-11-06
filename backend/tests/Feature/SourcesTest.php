@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\Telegram\TrackUpserter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -125,6 +126,35 @@ class SourcesTest extends TestCase
 
         // Asking for a song the library already has answers at once.
         $this->actingAs($member)->postJson('/api/requests', ['title' => 'Kerm'])->assertCreated()->assertJsonPath('data.status', 'fulfilled');
+    }
+
+    public function test_adding_a_song_already_in_a_playlist_says_so(): void
+    {
+        $user = User::factory()->create();
+        $track = $this->channelPost(1, 'Shayea', 'Kerm');
+        $other = $this->channelPost(2, 'Shayea', 'Boht');
+        $playlist = $this->actingAs($user)->postJson('/api/playlists', ['name' => 'Mine'])->json('data.id');
+
+        $this->actingAs($user)->postJson("/api/playlists/$playlist/tracks", ['track_ids' => [$track->id]])->assertJsonPath('added', 1)->assertJsonPath('already', 0);
+        $this->actingAs($user)->postJson("/api/playlists/$playlist/tracks", ['track_ids' => [$track->id]])->assertJsonPath('added', 0)->assertJsonPath('already', 1);
+        $this->actingAs($user)->postJson("/api/playlists/$playlist/tracks", ['track_ids' => [$track->id, $other->id]])->assertJsonPath('added', 1)->assertJsonPath('already', 1);
+        $this->assertSame([$playlist], $this->actingAs($user)->getJson("/api/tracks/{$track->id}/playlists")->json('data'));
+        $this->assertSame([], $this->actingAs(User::factory()->create())->getJson("/api/tracks/{$track->id}/playlists")->json('data'));
+    }
+
+    public function test_discovery_also_looks_for_artists_similar_to_the_most_played(): void
+    {
+        Http::fake([
+            'api.deezer.com/search/artist*' => Http::response(['data' => [['id' => 7, 'name' => 'Shayea']]]),
+            'api.deezer.com/artist/7/related*' => Http::response(['data' => [['name' => 'Mehrad Hidden'], ['name' => 'Arta']]]),
+        ]);
+        $user = User::factory()->create();
+        Play::query()->create(['user_id' => $user->id, 'track_id' => $this->channelPost(1, 'Shayea', 'Kerm')->id, 'seconds' => 100, 'played_at' => now()]);
+
+        $discovery = app(\App\Services\Discovery\TelegramDiscovery::class);
+        $this->assertSame(['Mehrad Hidden', 'Arta'], $discovery->similarArtists());
+        $this->assertArrayHasKey('mehrad hidden', $discovery->artists());
+        $this->assertArrayHasKey('shayea', $discovery->artists());
     }
 
     public function test_duplicates_already_in_the_library_are_merged_keeping_plays_and_likes(): void
