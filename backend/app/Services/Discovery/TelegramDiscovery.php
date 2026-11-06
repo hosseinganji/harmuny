@@ -21,7 +21,7 @@ class TelegramDiscovery
 {
     public const LAST_RUN = 'discovery.last_run';
 
-    public function __construct(private TelegramManager $telegram, private TrackImporter $importer) {}
+    public function __construct(private TelegramManager $telegram, private TrackImporter $importer, private SimilarArtists $similar) {}
 
     /** @return list<string> channel usernames */
     public static function channels(): array
@@ -33,7 +33,8 @@ class TelegramDiscovery
     }
 
     /**
-     * Artists to look for: everyone's follows, then the most played (half a year), then the biggest in the library.
+     * Artists to look for: everyone's follows, then the most played (half a year), then the biggest in the library,
+     * then artists similar to the most played (see similarArtists).
      *
      * @return array<string, string> normalized name => name
      */
@@ -41,17 +42,43 @@ class TelegramDiscovery
     {
         $limit = config('music.discovery.artists');
         $names = DB::table('artist_follows')->distinct()->pluck('artist')
-            ->merge(Play::query()->join('tracks', 'tracks.id', '=', 'plays.track_id')
-                ->where('plays.played_at', '>=', now()->subDays(180))->whereNotNull('tracks.artist')
-                ->groupBy('tracks.artist')->orderByRaw('COUNT(*) DESC')->limit($limit)->pluck('tracks.artist'))
+            ->merge($this->mostPlayed($limit))
             ->merge(Track::query()->whereNotNull('artist')->groupBy('artist')->orderByRaw('COUNT(*) DESC')->limit($limit)->pluck('artist'));
 
+        return $this->split($names, $limit * 2) + $this->split(collect($this->similarArtists()), $limit * 2);
+    }
+
+    /**
+     * Artists like the ones members play most (Deezer's related artists, and artists played by the same people).
+     *
+     * @return list<string>
+     */
+    public function similarArtists(): array
+    {
+        $names = [];
+        foreach ($this->mostPlayed(config('music.discovery.similar_of')) as $artist) {
+            array_push($names, ...$this->similar->to($artist, config('music.discovery.similar_each')));
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    private function mostPlayed(int $limit)
+    {
+        return Play::query()->join('tracks', 'tracks.id', '=', 'plays.track_id')
+            ->where('plays.played_at', '>=', now()->subDays(180))->whereNotNull('tracks.artist')
+            ->groupBy('tracks.artist')->orderByRaw('COUNT(*) DESC')->limit($limit)->pluck('tracks.artist');
+    }
+
+    /** @return array<string, string> normalized name => name */
+    private function split($names, int $max): array
+    {
         $artists = [];
         foreach ($names as $name) {
             // "Shayea & Arta" counts for both.
             foreach (preg_split('/\s*(?:&|،|,|\bft\.?|\bfeat\.?|\bx\b|\band\b|\s-\s)\s*/iu', (string) $name) as $part) {
                 $key = TextNormalizer::normalize($part);
-                if (mb_strlen($key) >= 3 && count($artists) < $limit * 2) {
+                if (mb_strlen($key) >= 3 && count($artists) < $max) {
                     $artists[$key] ??= trim($part);
                 }
             }

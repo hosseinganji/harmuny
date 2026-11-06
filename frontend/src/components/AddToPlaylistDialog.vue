@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Plus } from 'lucide-vue-next'
+import { Check, Plus } from 'lucide-vue-next'
+import { api } from '@/lib/api'
 import { computed, ref, watch } from 'vue'
 import { t } from '@/lib/i18n'
 import { usePlaylists } from '@/stores/playlists'
@@ -17,11 +18,21 @@ const busy = ref(false)
 const mine = computed(() => playlists.mine.filter((p) => p.can_edit ?? p.is_owner))
 const ids = computed(() => (ui.addToPlaylist ?? []).filter((t) => t.kind === 'remote').map((t) => t.id as number))
 
-watch(() => ui.addToPlaylist, (v) => {
+// For a single song: the playlists it is already in, marked "already added".
+const containing = ref(new Set<number>())
+watch(() => ui.addToPlaylist, async (v) => {
+  containing.value = new Set()
   if (v) {
     creating.value = false
     name.value = ''
     if (!playlists.loaded) playlists.load()
+    if (ids.value.length === 1) {
+      try {
+        containing.value = new Set((await api.get<{ data: number[] }>(`/tracks/${ids.value[0]}/playlists`)).data)
+      } catch {
+        // Offline: adding still says it if the song is there.
+      }
+    }
   }
 })
 
@@ -71,10 +82,13 @@ async function create() {
         @click="add(p.id)"
       >
         <div class="w-12 shrink-0"><CoverMosaic :cover-url="p.cover_url" :track-ids="p.preview_track_ids" rounded="rounded-lg" /></div>
-        <div class="min-w-0">
+        <div class="min-w-0 flex-1">
           <div class="truncate font-semibold">{{ p.name }}</div>
           <div class="text-sm text-muted">{{ t('playlist.songs', { n: p.tracks_count ?? 0 }) }}</div>
         </div>
+        <span v-if="containing.has(p.id)" class="flex shrink-0 items-center gap-1 rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
+          <Check class="size-3.5" />{{ t('playlist.alreadyAdded') }}
+        </span>
       </button>
       <p v-if="!mine.length && playlists.loaded" class="py-4 text-center text-sm text-subtle">{{ t('playlist.noneYet') }}</p>
     </div>

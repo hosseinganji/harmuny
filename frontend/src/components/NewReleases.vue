@@ -37,31 +37,31 @@ function play(i: number) {
         <div class="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.2em] text-accent">
           <Sparkles class="size-3.5 fill-current" />{{ today ? t('releases.today', { n: today }) : t('releases.thisWeek') }}
         </div>
-        <h2 class="text-2xl font-black tracking-tight">{{ t('releases.title') }}</h2>
+        <h2 class="text-xl font-black tracking-tight">{{ t('releases.title') }}</h2>
       </div>
       <button class="chip h-9 shrink-0 text-sm" @click="play(0)"><Play class="size-3.5 fill-current" />{{ t('releases.playAll') }}</button>
     </div>
 
-    <div class="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-2 scrollbar-none sm:scroll-px-6 sm:px-6">
+    <div class="flex snap-x snap-mandatory gap-2.5 overflow-x-auto scroll-px-4 px-4 pb-2 scrollbar-none sm:scroll-px-6 sm:px-6">
       <button
         v-for="(tr, i) in releases"
         :key="tr.id"
-        class="group relative aspect-[4/5] w-[72%] max-w-[17rem] shrink-0 snap-start overflow-hidden rounded-[1.75rem] text-start shadow-[0_18px_40px_-18px_rgba(0,0,0,0.8)] transition active:scale-[0.98] sm:w-56"
+        class="group relative aspect-square w-[46%] max-w-[12rem] shrink-0 snap-start overflow-hidden rounded-3xl text-start shadow-[0_14px_30px_-16px_rgba(0,0,0,0.8)] transition active:scale-[0.98] sm:w-44"
         @click="play(i)"
       >
         <TrackCover :track="tr" size="fill" rounded="rounded-none" class="absolute inset-0 !size-full transition-transform duration-500 group-hover:scale-105" />
         <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
-        <div class="absolute inset-x-0 top-0 flex items-center gap-1.5 p-3">
-          <span v-if="isFresh(tr)" class="rounded-full bg-accent px-2.5 py-1 text-[10px] font-black tracking-widest text-white shadow-lg">NEW</span>
-          <span class="rounded-full bg-black/45 px-2 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm">{{ relativeTime(tr.posted_at) }}</span>
+        <div class="absolute inset-x-0 top-0 flex items-center gap-1 p-2">
+          <span v-if="isFresh(tr)" class="rounded-full bg-accent px-2 py-0.5 text-[9px] font-black tracking-widest text-white shadow-lg">NEW</span>
+          <span class="truncate rounded-full bg-black/45 px-1.5 py-0.5 text-[9px] font-semibold text-white/90">{{ relativeTime(tr.posted_at) }}</span>
         </div>
-        <div class="absolute inset-x-0 bottom-0 flex items-end gap-2 p-4 text-white">
+        <div class="absolute inset-x-0 bottom-0 flex items-end gap-1.5 p-3 text-white">
           <div class="min-w-0 flex-1">
-            <div class="line-clamp-2 text-xl font-black leading-tight">{{ tr.title }}</div>
-            <div class="mt-0.5 truncate text-sm text-white/75">{{ tr.artist ?? t('track.unknownArtist') }}</div>
+            <div class="truncate text-sm font-black leading-tight">{{ tr.title }}</div>
+            <div class="truncate text-xs text-white/75">{{ tr.artist ?? t('track.unknownArtist') }}</div>
           </div>
-          <span class="flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-black shadow-xl transition group-active:scale-90">
-            <Play class="size-5 translate-x-px fill-current" />
+          <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-black shadow-xl transition group-active:scale-90">
+            <Play class="size-3.5 translate-x-px fill-current" />
           </span>
         </div>
       </button>

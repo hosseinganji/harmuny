@@ -28,11 +28,14 @@ return [
     // Daily discovery: public channels read with the connected Telegram account for new songs by the artists
     // members follow or play most. Only songs posted in the last few days, and only so many per run.
     'discovery' => [
-        'channels' => array_filter(explode(',', env('MUSIC_DISCOVERY_CHANNELS', 'ahangify,music_vip12'))),
+        'channels' => array_filter(explode(',', env('MUSIC_DISCOVERY_CHANNELS', 'ahangify,music_vip12,tehranmusic,behmusic'))),
         'days' => (int) env('MUSIC_DISCOVERY_DAYS', 7),
         'max_per_run' => (int) env('MUSIC_DISCOVERY_MAX', 30),
         'max_file_mb' => (int) env('MUSIC_DISCOVERY_MAX_FILE_MB', 60),
         'artists' => (int) env('MUSIC_DISCOVERY_ARTISTS', 40),
+        // Artists like the most played ones are looked for too: this many top artists, so many similar each.
+        'similar_of' => (int) env('MUSIC_DISCOVERY_SIMILAR_OF', 12),
+        'similar_each' => (int) env('MUSIC_DISCOVERY_SIMILAR_EACH', 6),
     ],
 
     // Admin uploads.

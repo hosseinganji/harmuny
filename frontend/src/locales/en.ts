@@ -695,4 +695,9 @@ export default {
   'discovery.noAccount': 'no Telegram account connected',
   'discovery.summary': '{checked} songs checked, {matched} by wanted artists, {added} added, {duplicates} already here',
   'discovery.never': 'Not run yet',
+  'toast.alreadyInPlaylist': 'Already in “{name}”',
+  'toast.allAlreadyInPlaylist': 'These songs are already in “{name}”',
+  'toast.addedSomeToPlaylist': '{n} added to “{name}”; {m} were already there',
+  'playlist.alreadyAdded': 'Already added',
+  'discovery.similar': '{n} similar artists (to the ones you play most)',
 } as Record<string, string>

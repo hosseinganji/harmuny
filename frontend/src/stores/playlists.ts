@@ -59,9 +59,13 @@ export const usePlaylists = defineStore('playlists', () => {
   }
 
   async function addTracks(id: number, trackIds: number[]) {
-    const res = await api.post<{ data: Playlist }>(`/playlists/${id}/tracks`, { track_ids: trackIds })
+    const res = await api.post<{ data: Playlist; added?: number; already?: number }>(`/playlists/${id}/tracks`, { track_ids: trackIds })
     upsert(res.data)
-    useUi().toast(t('toast.addedToPlaylist', { name: res.data.name }), 'success')
+    const name = res.data.name
+    // Songs already in the playlist aren't added again; say so.
+    if (res.added === 0) useUi().toast(trackIds.length > 1 ? t('toast.allAlreadyInPlaylist', { name }) : t('toast.alreadyInPlaylist', { name }))
+    else if (res.already) useUi().toast(t('toast.addedSomeToPlaylist', { name, n: res.added ?? 0, m: res.already }), 'success')
+    else useUi().toast(t('toast.addedToPlaylist', { name }), 'success')
     // Open views refresh, and an auto-downloading playlist fetches the new songs.
     window.dispatchEvent(new CustomEvent('playlist:changed', { detail: id }))
     return res.data
